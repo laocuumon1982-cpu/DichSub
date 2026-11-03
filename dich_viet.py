@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Dịch Việt by Duy Anh v3.1 — dịch phụ đề và sách/truyện sang tiếng Việt, tạo phụ đề từ video/âm thanh.
+Dịch Sub & Book v3.2 by Duy Anh — dịch phụ đề và sách/truyện sang tiếng Việt, tạo phụ đề từ video/âm thanh
+(nhận giọng nói bằng Whisper) và quét chữ phụ đề in sẵn trong phim (OCR).
 Giao diện web chạy trong cửa sổ riêng (Edge/Chrome), backend Python.
 - Phụ đề: .srt .ass .ssa .vtt — giữ nguyên timeline và thẻ định dạng.
 - Sách: .epub .docx .txt .pdf .md .html .mobi .prc .azw .azw3 — chia chương, dịch theo đoạn, xuất lại đúng định dạng
@@ -35,8 +36,8 @@ import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-APP_VERSION = "3.1.0"
-APP_NAME = "Dịch Việt by Duy Anh v3.1"
+APP_VERSION = "3.2.0"
+APP_NAME = "Dịch Sub & Book v3.2 by Duy Anh"
 GITHUB_REPO = "laocuumon1982-cpu/DichSub"     # nơi đăng bản mới (GitHub Releases)
 PORT = 47863
 HOME = os.path.expanduser("~")
@@ -2915,6 +2916,7 @@ class SttJob:
         self.t0 = None
         self.added = time.time()
         self.lib_id = ""
+        self.region = None          # OCR: [trên, dưới, trái, phải] theo tỉ lệ khung hình
 
     def summary(self):
         pct = int(min(100, self.pos * 100 / self.duration)) if self.duration else 0
@@ -2926,17 +2928,26 @@ class SttJob:
         return {"id": self.id, "name": self.name, "path": "" if self.uploaded else self.path, "status": self.status,
                 "error": self.error, "srt": self.srt, "lang": self.lang, "device": self.device, "stage": self.stage,
                 "duration": self.duration, "pos": self.pos, "pct": 100 if self.status == "done" else pct,
-                "eta": eta, "cues": len(self.cues), "libId": self.lib_id}
+                "eta": eta, "cues": len(self.cues), "libId": self.lib_id, "region": self.region}
 
     def to_json(self):
         return {"id": self.id, "name": self.name, "path": self.path, "uploaded": self.uploaded,
                 "status": self.status if self.status in ("done", "error") else ("stopped" if self.status in
                                                                                 ("running", "queued") else self.status),
                 "error": self.error, "srt": self.srt, "lang": self.lang, "duration": self.duration,
-                "added": self.added, "libId": self.lib_id}
+                "added": self.added, "libId": self.lib_id, "region": self.region}
 
 
 class SttState:
+    STORE = "jobs.json"
+    EXTS = MEDIA_EXTS
+    ADD_ERR = "Không phải file âm thanh hoặc video"
+    ADD_LOG = "Đã thêm để nhận giọng"
+    WORKER_NAME = "Whisper"
+
+    def worker_cmd(self, port):
+        return stt_worker_cmd(port)
+
     def __init__(self):
         self.jobs, self.order = {}, []
         self.lock = threading.RLock()
@@ -2952,7 +2963,7 @@ class SttState:
 
     def _load(self):
         try:
-            with open(os.path.join(STT_DIR, "jobs.json"), encoding="utf-8") as f:
+            with open(os.path.join(STT_DIR, self.STORE), encoding="utf-8") as f:
                 items = json.load(f)
         except Exception:
             return
@@ -2960,6 +2971,7 @@ class SttState:
             j = SttJob(it["id"], it["name"], it["path"], it.get("uploaded", False))
             j.status, j.error, j.srt, j.lang = it.get("status", "ready"), it.get("error", ""), it.get("srt", ""), it.get("lang", "")
             j.duration, j.added, j.lib_id = it.get("duration", 0), it.get("added", 0), it.get("libId", "")
+            j.region = it.get("region")
             if j.status == "done":
                 j.pos = j.duration
                 try:
@@ -2975,24 +2987,24 @@ class SttState:
             os.makedirs(STT_DIR, exist_ok=True)
             with self.lock:
                 data = [self.jobs[i].to_json() for i in self.order if i in self.jobs]
-            tmp = os.path.join(STT_DIR, "jobs.json.tmp")
+            tmp = os.path.join(STT_DIR, self.STORE + ".tmp")
             with open(tmp, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=1)
-            os.replace(tmp, os.path.join(STT_DIR, "jobs.json"))
+            os.replace(tmp, os.path.join(STT_DIR, self.STORE))
         except Exception as e:
             log_file(f"Không lưu được danh sách nhận giọng: {e}")
 
     def add(self, path, name=None, uploaded=False):
         if not os.path.isfile(path):
             raise ValueError(f"Không thấy file: {path}")
-        if os.path.splitext(path)[1].lower() not in MEDIA_EXTS:
-            raise ValueError("Không phải file âm thanh hoặc video")
+        if os.path.splitext(path)[1].lower() not in self.EXTS:
+            raise ValueError(self.ADD_ERR)
         j = SttJob(uuid.uuid4().hex[:10], name or os.path.basename(path), path, uploaded)
         with self.lock:
             self.jobs[j.id] = j
             self.order.append(j.id)
         self.save()
-        STATE.log(f"Đã thêm để nhận giọng: {j.name}")
+        STATE.log(f"{self.ADD_LOG}: {j.name}")
         return j
 
     def remove(self, jid):
@@ -3180,7 +3192,7 @@ class SttState:
         logf = open(LOG_PATH, "ab")
         w = HachimiWorker()
         try:
-            w.proc = subprocess.Popen(stt_worker_cmd(port), stdin=subprocess.DEVNULL, stdout=logf, stderr=logf,
+            w.proc = subprocess.Popen(self.worker_cmd(port), stdin=subprocess.DEVNULL, stdout=logf, stderr=logf,
                                       creationflags=NO_WINDOW, cwd=APP_DIR)
         finally:
             logf.close()
@@ -3194,9 +3206,9 @@ class SttState:
                     if self.stop.is_set():
                         raise Stopped()
                     if w.proc.poll() is not None:
-                        return False, f"Whisper thoát ngay khi khởi động (mã {w.proc.returncode})", False
+                        return False, f"{self.WORKER_NAME} thoát ngay khi khởi động (mã {w.proc.returncode})", False
                     if time.time() > end:
-                        return False, "Whisper không khởi động được (quá thời gian chờ)", False
+                        return False, f"{self.WORKER_NAME} không khởi động được (quá thời gian chờ)", False
             w.sock, w.rf = conn, conn.makefile("rb")
             conn.sendall((json.dumps(opts, ensure_ascii=True) + "\n").encode("ascii"))
             conn.settimeout(1800)       # model lớn trên CPU có thể mất lâu cho một câu
@@ -3208,7 +3220,7 @@ class SttState:
                         raise Stopped()
                     time.sleep(0.3)
                     code = w.proc.poll()
-                    return False, f"Whisper bị tắt đột ngột (mã {code}), thường do thiếu hoặc lỗi thư viện GPU", got
+                    return False, f"{self.WORKER_NAME} bị tắt đột ngột (mã {code}), thường do thiếu hoặc lỗi thư viện", got
                 ev = json.loads(line.decode("ascii"))
                 if ev.get("ev") == "done":
                     return True, "", got
@@ -3218,11 +3230,11 @@ class SttState:
                     got = True
                 self._event(j, ev, lang_opt, size, conv)
         except socket.timeout:
-            return False, "Whisper không phản hồi (bị treo)", False
+            return False, f"{self.WORKER_NAME} không phản hồi (bị treo)", False
         except OSError as e:
             if self.stop.is_set():
                 raise Stopped()
-            return False, f"Mất kết nối với Whisper: {e}", False
+            return False, f"Mất kết nối với {self.WORKER_NAME}: {e}", False
         finally:
             srv.close()
             w.kill()
@@ -3230,16 +3242,14 @@ class SttState:
 
     def _finish(self, j, cfg, took):
         data = cues_to_srt(j.cues)
-        base = os.path.splitext(j.name)[0]
-        tag = j.lang or "auto"
-        fname = f"{base}.{tag}.srt"
+        fname = self.srt_name(j)
         folder = None
         if not j.uploaded and cfg.get("saveNext", True):
             folder = os.path.dirname(j.path)
         out_dir = folder or cfg.get("outDir") or default_out_dir()
         try:
             os.makedirs(out_dir, exist_ok=True)
-            path = os.path.join(out_dir, fname)
+            path = self.free_path(out_dir, fname)
             with open(path, "w", encoding="utf-8-sig", newline="\r\n") as f:
                 f.write(data)
         except OSError:
@@ -3263,6 +3273,12 @@ class SttState:
             except Exception as e:
                 STATE.log(f"[{j.name}] Không tự dịch được: {e}")
 
+    def srt_name(self, j):
+        return f"{os.path.splitext(j.name)[0]}.{j.lang or 'auto'}.srt"
+
+    def free_path(self, folder, fname):
+        return os.path.join(folder, fname)
+
     def to_library(self, j, tcfg, out_dir=None):
         """Thêm SRT vừa tạo vào Tài liệu và dịch (sang tiếng Việt theo dịch vụ đang chọn)."""
         if not j.cues:
@@ -3270,8 +3286,7 @@ class SttState:
         if j.lib_id and j.lib_id in STATE.jobs:
             job = STATE.jobs[j.lib_id]
         else:
-            name = f"{os.path.splitext(j.name)[0]}.{j.lang or 'auto'}.srt"
-            job = STATE.add(name, cues_to_srt(j.cues).encode("utf-8"))
+            job = STATE.add(self.srt_name(j), cues_to_srt(j.cues).encode("utf-8"))
             if out_dir:
                 job.out_dir = out_dir
                 job.save_meta()
@@ -3293,21 +3308,526 @@ class SttState:
 STT = None
 
 
-def pick_files_dialog():
+def pick_files_dialog(exts_set=None, title="Chọn video hoặc âm thanh để tạo phụ đề"):
     """Hộp chọn file của Windows (trả về đường dẫn thật, không phải chép file)."""
     if not IS_WIN:
         raise RuntimeError("no-dialog")
-    exts = ";".join("*" + e for e in sorted(MEDIA_EXTS))
+    exts = ";".join("*" + e for e in sorted(exts_set or MEDIA_EXTS))
     ps = ("Add-Type -AssemblyName System.Windows.Forms;"
           "$f=New-Object System.Windows.Forms.Form;$f.TopMost=$true;$f.ShowInTaskbar=$false;"
           "$d=New-Object System.Windows.Forms.OpenFileDialog;$d.Multiselect=$true;"
-          "$d.Title='Chọn video hoặc âm thanh để tạo phụ đề';"
+          f"$d.Title='{title}';"
           f"$d.Filter='Video, âm thanh|{exts}|Tất cả|*.*';"
           "if($d.ShowDialog($f) -eq 'OK'){[Console]::OutputEncoding=[Text.Encoding]::UTF8;$d.FileNames -join \"`n\"}")
     p = subprocess.run(["powershell", "-NoProfile", "-STA", "-Command", ps], capture_output=True,
                        creationflags=NO_WINDOW, stdin=subprocess.DEVNULL, timeout=3600)
     out = p.stdout.decode("utf-8", "replace").strip()
     return [x.strip() for x in out.splitlines() if x.strip()]
+
+
+# ================================================================ Quét chữ phụ đề in sẵn trong video (OCR) -> SRT
+# Đọc từng khung hình (PyAV), chỉ lấy vùng phụ đề, phát hiện lúc chữ đổi, nhận chữ bằng RapidOCR (PaddleOCR
+# chạy bằng onnxruntime, model có sẵn: Trung giản/phồn, Nhật, Anh; tải thêm: Hàn, Việt/Latin).
+
+VIDEO_EXTS = {".mp4", ".mkv", ".avi", ".mov", ".wmv", ".flv", ".webm", ".ts", ".m2ts", ".mts", ".mpg", ".mpeg",
+              ".m4v", ".3gp", ".vob", ".rmvb", ".rm"}
+_MS = "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.10.0/onnx/PP-OCRv5/rec/"
+OCR_MODELS = {
+    "en": {"file": "en_PP-OCRv5_rec_mobile.onnx", "name": "Tiếng Anh",
+           "sha": "c3461add59bb4323ecba96a492ab75e06dda42467c9e3d0c18db5d1d21924be8"},
+    "ko": {"file": "korean_PP-OCRv5_rec_mobile.onnx", "name": "Tiếng Hàn",
+           "sha": "cd6e2ea50f6943ca7271eb8c56a877a5a90720b7047fe9c41a2e541a25773c9b"},
+    "vi": {"file": "latin_PP-OCRv5_rec_mobile.onnx", "name": "Tiếng Việt và chữ Latin",
+           "sha": "b20bd37c168a570f583afbc8cd7925603890efbcdc000a59e22c269d160b5f5a"},
+}
+OCR_DIR = os.path.join(MODELS_DIR, "ocr")
+DEFAULT_REGION = [0.76, 0.98, 0.04, 0.96]
+
+
+def ocr_model_path(lang):
+    m = OCR_MODELS.get(lang)
+    return os.path.join(OCR_DIR, m["file"]) if m else None
+
+
+def ocr_model_ready(lang):
+    p = ocr_model_path(lang)
+    return p is None or (os.path.isfile(p) and os.path.isfile(p + ".ok"))
+
+
+def ocr_libs_ok():
+    import importlib.util
+    importlib.invalidate_caches()
+    return {m: bool(importlib.util.find_spec(m)) for m in ("rapidocr", "av", "onnxruntime", "cv2")}
+
+
+def download_ocr_model_task(lang):
+    m = OCR_MODELS[lang]
+
+    def fn(task):
+        os.makedirs(OCR_DIR, exist_ok=True)
+        dest = ocr_model_path(lang)
+        task["msg"] = f"Đang tải model chữ {m['name']}"
+        req = urllib.request.Request(_MS + m["file"], method="HEAD", headers={"User-Agent": UA})
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                task["total"] = int(r.headers.get("Content-Length") or 0)
+        except Exception:
+            pass
+        download_file(_MS + m["file"], dest, task)
+        import hashlib
+        h = hashlib.sha256()
+        with open(dest, "rb") as f:
+            for chunk in iter(lambda: f.read(1 << 20), b""):
+                h.update(chunk)
+        if h.hexdigest() != m["sha"]:
+            os.remove(dest)
+            raise RuntimeError("File model tải về bị lỗi, hãy thử lại.")
+        open(dest + ".ok", "w").close()
+        _OCR_ENGINES.clear()
+        return "Đã tải xong."
+    return fn
+
+
+def ocr_info():
+    libs = ocr_libs_ok()
+    return {"libs": libs, "haveLibs": all(libs.values()), "frozen": bool(getattr(sys, "frozen", False)),
+            "models": [{"lang": k, "name": v["name"], "ready": ocr_model_ready(k)} for k, v in OCR_MODELS.items()],
+            "tasks": TASKS.public(), "dataDir": DATA_DIR}
+
+
+_OCR_ENGINES = {}
+_OCR_LOCK = threading.Lock()
+
+
+def ocr_engine(lang, threads=0):
+    """RapidOCR: nhận diện chữ trên ảnh nhỏ (vùng phụ đề), không xoay chữ."""
+    key = (lang if lang in OCR_MODELS else "multi", threads)
+    if key in _OCR_ENGINES:
+        return _OCR_ENGINES[key]
+    from rapidocr import RapidOCR
+    params = {"Global.log_level": "error", "Global.use_cls": False, "Det.limit_type": "max",
+              "Det.limit_side_len": 1280, "Det.box_thresh": 0.5, "Global.text_score": 0.5}
+    if threads:
+        params["EngineConfig.onnxruntime.intra_op_num_threads"] = int(threads)
+    if lang in OCR_MODELS:
+        if not ocr_model_ready(lang):
+            raise FatalError(f"Chưa tải model chữ {OCR_MODELS[lang]['name']}. Bấm 'Tải về máy' trong tab Quét phụ đề.")
+        params["Rec.model_path"] = ocr_model_path(lang)
+    eng = RapidOCR(params=params)
+    _OCR_ENGINES[key] = eng
+    return eng
+
+
+_WORDS = {}
+
+
+def _word_cost():
+    """Danh sách từ tiếng Anh theo độ phổ biến (từ dự án wordninja, MIT) -> chi phí tách từ."""
+    if "c" not in _WORDS:
+        import gzip
+        import math
+        try:
+            with gzip.open(os.path.join(BASE_DIR, "en_words.txt.gz"), "rt", encoding="utf-8") as f:
+                words = f.read().split()
+        except OSError:
+            words = []
+        n = max(2, len(words))
+        _WORDS["c"] = {w: math.log((i + 1) * math.log(n)) for i, w in enumerate(words)}
+        _WORDS["m"] = max((len(w) for w in words), default=1)
+    return _WORDS["c"], _WORDS["m"]
+
+
+def split_glued(tok):
+    """'SoItoldhim' -> 'So I told him' (OCR hay làm mất dấu cách trong chữ Anh)."""
+    cost, maxw = _word_cost()
+    low = tok.lower()
+    if not cost or len(tok) < 5 or low in cost or not tok.isalpha():
+        return tok
+    def c(i, k):
+        w = low[i - k:i]
+        if k == 1 and tok[i - 1] == "I":      # chữ I viết hoa đứng riêng: "Itold" -> "I told"
+            return 0.5
+        if k > 1 and any(ch.isupper() for ch in tok[i - k + 1:i]):     # chữ hoa giữa từ = đầu từ mới
+            return 9e9
+        return cost.get(w, 9e9)
+
+    best = [(0.0, 0)]
+    for i in range(1, len(low) + 1):
+        cands = [(best[i - k][0] + c(i, k), k) for k in range(1, min(i, maxw) + 1)]
+        best.append(min(cands))
+    if best[-1][0] >= 9e9:
+        return tok
+    parts, i = [], len(low)
+    while i > 0:
+        k = best[i][1]
+        parts.append(tok[i - k:i])
+        i -= k
+    parts.reverse()
+    if len(parts) == 1 or any(len(p) == 1 and p.lower() not in ("a", "i") for p in parts):
+        return tok
+    return " ".join(parts)
+
+
+def fix_english_spaces(line):
+    if not LATIN_RE.search(line) or CJK_RE.search(line) or text_lang(line) == "vi":
+        return line
+    return re.sub(r"[A-Za-z]+", lambda m: split_glued(m.group(0)), line)
+
+
+def _cjk_char(c):
+    """Chữ Trung/Nhật/Hàn hoặc dấu câu toàn khổ (，。！？「」...) -> nối không cần dấu cách."""
+    return bool(CJK_RE.match(c) or KANA_RE.match(c) or HANGUL_RE.match(c) or "\u3000" <= c <= "\u303f"
+                or "\uff00" <= c <= "\uffef") if c else False
+
+
+def ocr_image_text(eng, img_bgr, min_score=0.6, ref_h=0, heights=None):
+    """Nhận chữ một ảnh -> (chuỗi nhiều dòng, điểm tin cậy trung bình).
+    ref_h: chiều cao chữ phụ đề thường gặp trong phim này (bỏ chữ nhỏ hơn hẳn: nhiễu, logo)."""
+    r = eng(img_bgr)
+    if r is None or not getattr(r, "txts", None):
+        return "", 0.0
+    items = []
+    for box, txt, sc in zip(r.boxes, r.txts, r.scores):
+        txt = (txt or "").strip()
+        if not txt or sc < min_score:
+            continue
+        ys = [p[1] for p in box]
+        xs = [p[0] for p in box]
+        items.append({"t": txt, "s": float(sc), "y": (min(ys) + max(ys)) / 2, "h": max(ys) - min(ys), "x": min(xs)})
+    if not items:
+        return "", 0.0
+    hmax = max(i["h"] for i in items)
+    items = [i for i in items if i["h"] >= max(hmax, ref_h) * 0.55]      # bỏ chữ nhỏ (logo, chữ chạy, nhiễu)
+    if not items:
+        return "", 0.0
+    avg = sum(i["s"] for i in items) / len(items)
+    if len(_norm_txt("".join(i["t"] for i in items))) <= 1 and avg < 0.97:     # một chữ lẻ, nhận không chắc -> nhiễu
+        return "", 0.0
+    if heights is not None and avg >= 0.9 and len(_norm_txt("".join(i["t"] for i in items))) >= 2:
+        heights.append(sum(i["h"] for i in items) / len(items))
+    items.sort(key=lambda i: i["y"])
+    lines, cur = [], [items[0]]
+    for i in items[1:]:
+        if abs(i["y"] - cur[-1]["y"]) <= max(i["h"], cur[-1]["h"]) * 0.6:
+            cur.append(i)
+        else:
+            lines.append(cur)
+            cur = [i]
+    lines.append(cur)
+    out = []
+    for ln in lines:
+        ln.sort(key=lambda i: i["x"])
+        s = ln[0]["t"]
+        for i in ln[1:]:
+            s += ("" if _cjk_char(s[-1]) or _cjk_char(i["t"][0]) else " ") + i["t"]
+        out.append(fix_english_spaces(s))
+    if len(out) > 1 and all(len(_norm_txt(x)) <= 1 for x in out):     # nhiều chữ lẻ rời rạc -> nhiễu nền
+        return "", 0.0
+    return "\n".join(out), sum(i["s"] for i in items) / len(items)
+
+
+def _av_open(path):
+    import av
+    try:
+        return av.open(path, mode="r", metadata_errors="ignore")
+    except TypeError:
+        return av.open(path, mode="r")
+
+
+def _video_duration(c, vs):
+    if c.duration:
+        return float(c.duration) / 1e6
+    if vs.duration and vs.time_base:
+        return float(vs.duration * vs.time_base)
+    return 0.0
+
+
+def grab_frame(path, t):
+    """Khung hình gần thời điểm t (giây) -> (ảnh PIL RGB, thời lượng video)."""
+    c = _av_open(path)
+    try:
+        vs = c.streams.video[0]
+        dur = _video_duration(c, vs)
+        t = max(0.0, min(float(t), max(0.0, dur - 0.5)))
+        try:
+            if vs.time_base:
+                c.seek(int(t / vs.time_base), stream=vs, backward=True, any_frame=False)
+            else:
+                c.seek(int(t * 1e6), backward=True, any_frame=False)
+        except Exception:
+            pass
+        img, last = None, None
+        for fr in c.decode(vs):
+            last = fr
+            if fr.time is None or fr.time >= t - 0.03:
+                img = fr.to_image()
+                break
+        if img is None and last is not None:
+            img = last.to_image()
+        if img is None:
+            raise ValueError("Không đọc được khung hình")
+        return img, dur
+    finally:
+        c.close()
+
+
+def crop_box(w, h, region):
+    y0, y1, x0, x1 = region or DEFAULT_REGION
+    return int(x0 * w), int(y0 * h), max(int(x0 * w) + 8, int(x1 * w)), max(int(y0 * h) + 8, int(y1 * h))
+
+
+def _luma(fr):
+    """Kênh sáng (Y) của khung hình, 8 bit."""
+    import numpy as np
+    name = fr.format.name
+    if name in ("yuv420p", "yuvj420p", "yuv422p", "yuvj422p", "yuv444p", "yuvj444p", "nv12", "nv21"):
+        pl = fr.planes[0]
+        a = np.frombuffer(pl, np.uint8).reshape(pl.height, pl.line_size)
+        return a[:, :pl.width]
+    return fr.to_ndarray(format="gray")
+
+
+def text_mask(g, bright=200, dark=90, r=3):
+    """Điểm sáng nằm sát viền tối = nét chữ phụ đề (chữ trắng/vàng viền đen). Nền sáng đồng đều bị loại."""
+    import numpy as np
+    b = g >= bright
+    d = g <= dark
+    near = np.zeros_like(d)
+    near[r:, :] |= d[:-r, :]
+    near[:-r, :] |= d[r:, :]
+    near[:, r:] |= d[:, :-r]
+    near[:, :-r] |= d[:, r:]
+    return b & near
+
+
+def ocr_worker_main(port):
+    s = socket.create_connection(("127.0.0.1", port))
+    rf = s.makefile("rb")
+
+    def send(o):
+        s.sendall((json.dumps(o, ensure_ascii=True) + "\n").encode("ascii"))
+
+    try:
+        import numpy as np
+        opts = json.loads(rf.readline().decode("ascii"))
+        send({"ev": "stage", "msg": "Đang nạp bộ nhận chữ..."})
+        eng = ocr_engine(opts.get("lang") or "multi", int(opts.get("threads") or 0))
+        c = _av_open(opts["path"])
+        vs = c.streams.video[0]
+        vs.thread_type = "AUTO"
+        try:
+            vs.codec_context.skip_frame = "NONREF"   # bỏ giải mã khung không tham chiếu: nhanh gấp đôi
+        except Exception:
+            pass
+        dur = _video_duration(c, vs)
+        send({"ev": "lang", "lang": "", "duration": dur, "device": "CPU"})
+        step = float(opts.get("interval") or 0.2)
+        bright = int(opts.get("bright") or 200)
+        region = opts.get("region") or DEFAULT_REGION
+        send({"ev": "stage", "msg": "Đang quét phụ đề..."})
+        nxt, last_pos = 0.0, 0.0
+        cur = None          # đoạn chữ đang hiện: {"s", "sig", "n", "img"}
+        box = None
+        heights = []        # chiều cao chữ phụ đề đã nhận chắc chắn -> lọc nhiễu nhỏ
+
+        def close(end):
+            if cur is None or cur["img"] is None:
+                return
+            ref = sorted(heights[-40:])[len(heights[-40:]) // 2] if len(heights) >= 3 else 0
+            text, sc = ocr_image_text(eng, cur["img"], ref_h=ref, heights=heights)
+            if text:        # chữ hiện/tắt trong khoảng giữa 2 lần lấy mẫu -> lùi nửa bước cho sát
+                send({"ev": "seg", "s": max(0.0, cur["s"] - step / 2), "e": max(0.0, end - step / 2),
+                      "t": text, "sc": round(sc, 3)})
+
+        import av as _av
+        bad = tuple(x for x in (getattr(getattr(_av, "error", None), "InvalidDataError", None),) if x) or (ValueError,)
+        frames = c.decode(vs)
+        while True:
+            try:
+                fr = next(frames)
+            except StopIteration:
+                break
+            except bad:
+                continue
+            t = fr.time
+            if t is None or t < nxt:
+                continue
+            nxt = t + step
+            y = _luma(fr)
+            if box is None:
+                box = crop_box(y.shape[1], y.shape[0], region)
+            x0, y0, x1, y1 = box
+            sig = text_mask(y[y0:y1, x0:x1], bright)[::3, ::3]
+            n = int(sig.sum())
+            has = n >= max(8, sig.size * 0.0015)
+            if cur is not None:
+                diff = np.logical_xor(sig, cur["sig"]).sum() / max(1, np.logical_or(sig, cur["sig"]).sum())
+                if not has or diff > 0.33 or t - cur["s"] > 6.0:
+                    close(t)
+                    cur = None
+                elif cur["n"] < 3:          # lấy khung thứ 2-3 của câu (qua hiệu ứng hiện dần)
+                    cur["n"] += 1
+                    cur["img"] = fr.to_ndarray(format="bgr24")[y0:y1, x0:x1].copy()
+                    cur["sig"] = sig
+            if cur is None and has:
+                cur = {"s": t, "sig": sig, "n": 1, "img": fr.to_ndarray(format="bgr24")[y0:y1, x0:x1].copy()}
+            if t - last_pos >= 2:
+                last_pos = t
+                send({"ev": "pos", "p": t})
+        close(dur or (nxt))
+        c.close()
+        send({"ev": "done"})
+    except Exception as e:
+        try:
+            send({"ev": "error", "msg": f"{type(e).__name__}: {e}"})
+        except Exception:
+            pass
+    finally:
+        try:
+            s.close()
+        except Exception:
+            pass
+
+
+def ocr_worker_cmd(port):
+    if getattr(sys, "frozen", False):
+        return [sys.executable, "--ocr-worker", str(port)]
+    return [sys.executable, os.path.abspath(__file__), "--ocr-worker", str(port)]
+
+
+def _norm_txt(t):
+    return re.sub(r"[\s，,。.！!？?、:：;；\"'“”‘’…\-—]", "", t or "")
+
+
+def text_lang(text):
+    if KANA_RE.search(text):
+        return "ja"
+    if HANGUL_RE.search(text):
+        return "ko"
+    if CJK_RE.search(text):
+        return "zh"
+    if re.search(r"[ăâđêôơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹ]", text, re.I):
+        return "vi"
+    return "en" if LATIN_RE.search(text) else ""
+
+
+def make_ocr_cues(segs, conv=None, step=0.2):
+    """Gộp các đoạn cùng câu (chữ giống nhau, liền nhau) thành dòng phụ đề."""
+    import difflib
+    cues = []
+    for sg in segs:
+        t = sg["t"].strip()
+        if conv:
+            t = conv(t)
+        k = _norm_txt(t)
+        if not k:
+            continue
+        if cues:
+            last = cues[-1]
+            gap = sg["s"] - last["e"]
+            # cùng câu bị tách (nền đổi làm tưởng chữ đổi): giống hệt và gần nhau, hoặc gần giống và liền nhau
+            if (k == last["k"] and gap <= max(1.0, step * 4)) or (
+                    gap <= step * 1.5 and difflib.SequenceMatcher(None, k, last["k"]).ratio() >= 0.85):
+                last["e"] = max(last["e"], sg["e"])
+                if sg.get("sc", 0) > last["sc"]:
+                    last.update(t=t, k=k, sc=sg.get("sc", 0))
+                continue
+        cues.append({"s": sg["s"], "e": sg["e"], "t": t, "k": k, "sc": sg.get("sc", 0)})
+    out = []
+    for c in cues:
+        if c["e"] - c["s"] < step * 1.2 and c["sc"] < 0.85:     # chớp qua, nhận kém -> thường là nhiễu
+            continue
+        if len(c["k"]) <= 1 and c["e"] - c["s"] < 0.8:            # một chữ lẻ hiện thoáng qua -> nhiễu
+            continue
+        out.append(c)
+    res = []
+    for i, c in enumerate(out):
+        nxt = out[i + 1]["s"] if i + 1 < len(out) else c["e"] + 5
+        end = min(max(c["e"], c["s"] + 0.5), nxt - 0.02)
+        res.append([round(c["s"], 3), round(max(end, c["s"] + 0.2), 3), c["t"]])
+    return res
+
+
+class OcrState(SttState):
+    STORE = "ocr_jobs.json"
+    EXTS = VIDEO_EXTS
+    ADD_ERR = "Không phải file video"
+    ADD_LOG = "Đã thêm để quét phụ đề"
+    WORKER_NAME = "Bộ quét chữ"
+    _step = 0.2
+
+    def worker_cmd(self, port):
+        return ocr_worker_cmd(port)
+
+    def free_path(self, folder, fname):
+        p = os.path.join(folder, fname)
+        if os.path.exists(p):           # không ghi đè phụ đề sẵn có (vd. do tab Giọng nói tạo)
+            p = p[:-4] + ".ocr.srt"
+        return p
+
+    def _event(self, j, ev, lang_opt, size, conv):
+        k = ev.get("ev")
+        if k == "seg":
+            with self.lock:
+                j.segments.append(ev)
+                j.pos = max(j.pos, float(ev.get("e") or 0))
+                j.cues = make_ocr_cues(j.segments, conv, self._step)
+        elif k == "lang":
+            if ev.get("duration"):
+                j.duration = float(ev["duration"])
+            j.device = "CPU"
+            STATE.log(f"[{j.name}] Video dài {int(j.duration // 60)} phút {int(j.duration % 60)} giây.")
+        else:
+            SttState._event(self, j, ev, lang_opt, size, conv)
+
+    def _run(self, j, cfg):
+        libs = ocr_libs_ok()
+        if not all(libs.values()):
+            raise FatalError("Thiếu thư viện quét chữ (rapidocr, opencv). " +
+                             ("Hãy build lại exe bằng Tao_file_EXE.bat." if getattr(sys, "frozen", False)
+                              else "Chạy: pip install rapidocr"))
+        lang = cfg.get("lang") or "multi"
+        if lang in OCR_MODELS and not ocr_model_ready(lang):
+            raise FatalError(f"Chưa tải model chữ {OCR_MODELS[lang]['name']}. Bấm 'Tải về máy' trong tab Quét phụ đề.")
+        self._step = float(cfg.get("interval") or 0.2)
+        conv = zh_converter(cfg.get("zhScript") or "keep")
+        opts = {"path": j.path, "lang": lang, "interval": self._step, "bright": int(cfg.get("bright") or 200),
+                "region": j.region or cfg.get("region") or DEFAULT_REGION,
+                "threads": max(2, (os.cpu_count() or 4) - 1)}
+        STATE.log(f"[{j.name}] Bắt đầu quét phụ đề (mỗi {self._step} giây, vùng {int(opts['region'][0] * 100)}–"
+                  f"{int(opts['region'][1] * 100)}% chiều cao).")
+        t0 = time.time()
+        with self.lock:
+            j.segments, j.cues, j.pos = [], [], 0.0
+        ok, err, _ = self._worker_run(j, opts, None, None, conv)
+        if not ok:
+            if self.stop.is_set():
+                raise Stopped()
+            raise RuntimeError(err)
+        with self.lock:
+            j.cues = make_ocr_cues(j.segments, conv, self._step)
+            j.pos = j.duration
+            j.lang = text_lang(" ".join(c[2] for c in j.cues[:200])) or (lang if lang in OCR_MODELS else "")
+        if not j.cues:
+            raise RuntimeError("Không thấy chữ phụ đề nào. Hãy kiểm tra lại vùng quét (khung đỏ) và màu chữ.")
+        self._finish(j, cfg, time.time() - t0)
+
+
+OCRS = None
+
+
+def ocr_test(j, t, region, lang):
+    """Thử nhận chữ ở một khung hình (để người dùng kiểm tra vùng quét)."""
+    import numpy as np
+    img, _ = grab_frame(j.path, t)
+    w, h = img.size
+    x0, y0, x1, y1 = crop_box(w, h, region)
+    crop = np.asarray(img.crop((x0, y0, x1, y1)))[:, :, ::-1].copy()
+    with _OCR_LOCK:
+        eng = ocr_engine(lang or "multi")
+        t0 = time.time()
+        text, sc = ocr_image_text(eng, crop)
+    return {"text": text, "score": round(sc, 2), "ms": int((time.time() - t0) * 1000)}
 
 
 # ================================================================ cập nhật từ GitHub Releases
@@ -3381,7 +3901,7 @@ def update_task():
             raise RuntimeError("Tự cập nhật chỉ hỗ trợ Windows.")
         if not a:
             raise RuntimeError("Bản phát hành chưa có file cho kiểu cài đặt này.")
-        if (STATE and (STATE.running or not STATE.q.empty())) or (STT and STT.busy()):
+        if (STATE and (STATE.running or not STATE.q.empty())) or (STT and STT.busy()) or (OCRS and OCRS.busy()):
             raise RuntimeError("Đang dịch hoặc đang tạo phụ đề. Hãy đợi xong hoặc bấm Dừng rồi cập nhật.")
         upd = os.path.join(DATA_DIR, "update")
         shutil.rmtree(upd, ignore_errors=True)
@@ -3913,6 +4433,9 @@ class Handler(BaseHTTPRequestHandler):
                 with STT.lock:
                     res["stt"] = [STT.jobs[i].summary() for i in STT.order if i in STT.jobs]
                     res["sttRunning"] = STT.running
+                with OCRS.lock:
+                    res["ocr"] = [OCRS.jobs[i].summary() for i in OCRS.order if i in OCRS.jobs]
+                    res["ocrRunning"] = OCRS.running
                 with STATE.lock:
                     job = STATE.jobs.get(q.get("job", ""))
                     if job is not None:
@@ -3940,6 +4463,39 @@ class Handler(BaseHTTPRequestHandler):
                                             "mode": install_mode(), "newer": False})
             if u.path == "/api/update/status":
                 return self._send(200, TASKS.public().get("update") or {})
+            if u.path == "/api/ocr/info":
+                return self._send(200, ocr_info())
+            if u.path == "/api/ocr/frame":
+                j = OCRS.jobs.get(q.get("id", ""))
+                if j is None:
+                    raise KeyError("Không tìm thấy video")
+                img, dur = grab_frame(j.path, float(q.get("t", 0)))
+                if j.duration == 0 and dur:
+                    j.duration = dur
+                mw = int(q.get("w", 960))
+                if img.width > mw:
+                    img = img.resize((mw, int(img.height * mw / img.width)))
+                b = io.BytesIO()
+                img.convert("RGB").save(b, "JPEG", quality=82)
+                return self._send(200, b.getvalue(), "image/jpeg", {"X-Duration": str(dur)})
+            if u.path == "/api/ocr/cues":
+                j = OCRS.jobs.get(q.get("id", ""))
+                if j is None:
+                    raise KeyError("Không tìm thấy video")
+                f = max(0, int(q.get("from", 0)))
+                with OCRS.lock:
+                    f = min(f, len(j.cues))
+                    return self._send(200, {"total": len(j.cues), "from": f, "cues": j.cues[f:f + 3000],
+                                            "job": j.summary()})
+            if u.path == "/api/ocr/srt":
+                j = OCRS.jobs.get(q.get("id", ""))
+                if j is None or not j.cues:
+                    raise KeyError("Chưa có phụ đề")
+                name = OCRS.srt_name(j)
+                disp = "attachment; filename=\"%s\"; filename*=UTF-8''%s" % (
+                    re.sub(r"[^\x20-\x7e]", "_", name).replace('"', ""), urllib.parse.quote(name))
+                return self._send(200, "\ufeff" + cues_to_srt(j.cues).replace("\n", "\r\n"),
+                                  "application/x-subrip; charset=utf-8", {"Content-Disposition": disp})
             if u.path == "/api/stt/info":
                 return self._send(200, stt_info())
             if u.path == "/api/stt/cues":
@@ -3994,10 +4550,11 @@ class Handler(BaseHTTPRequestHandler):
             log_file(f"GET {u.path} lỗi: {e!r}")
             return self._send(400, {"error": str(e)})
 
-    def _upload(self, q):
+    def _upload(self, q, st=None):
+        st = st or STT
         name = os.path.basename((q.get("name") or "file").replace("\\", "/")) or "file"
-        if os.path.splitext(name)[1].lower() not in MEDIA_EXTS:
-            raise ValueError("Không phải file âm thanh hoặc video")
+        if os.path.splitext(name)[1].lower() not in st.EXTS:
+            raise ValueError(st.ADD_ERR)
         n = int(self.headers.get("Content-Length") or 0)
         d = os.path.join(STT_DIR, "uploads", uuid.uuid4().hex[:10])
         os.makedirs(d, exist_ok=True)
@@ -4010,17 +4567,95 @@ class Handler(BaseHTTPRequestHandler):
                         raise ValueError("Tải file lên bị ngắt giữa chừng")
                     f.write(chunk)
                     n -= len(chunk)
-            return STT.add(path, name, uploaded=True)
+            return st.add(path, name, uploaded=True)
         except Exception:
             shutil.rmtree(d, ignore_errors=True)
             raise
 
+    def _ocr_post(self, path, d):
+        if path == "/api/ocr/pick":
+            try:
+                paths = pick_files_dialog(VIDEO_EXTS, "Chọn video có phụ đề in sẵn để quét")
+            except RuntimeError:
+                return self._send(200, {"noDialog": True})
+            added, errors = [], []
+            for p_ in paths:
+                try:
+                    added.append(OCRS.add(p_).summary())
+                except Exception as e:
+                    errors.append(f"{os.path.basename(p_)}: {e}")
+            return self._send(200, {"added": added, "errors": errors})
+        if path == "/api/ocr/add":
+            added, errors = [], []
+            for p_ in d.get("paths", []):
+                try:
+                    added.append(OCRS.add(p_).summary())
+                except Exception as e:
+                    errors.append(f"{os.path.basename(p_)}: {e}")
+            return self._send(200, {"added": added, "errors": errors})
+        if path == "/api/ocr/start":
+            cfg = d.get("config") or {}
+            ids = d.get("ids") or [i for i in OCRS.order if OCRS.jobs[i].status in ("ready", "stopped", "error")]
+            return self._send(200, {"queued": OCRS.enqueue(ids, cfg)})
+        if path == "/api/ocr/stop":
+            OCRS.request_stop()
+            return self._send(200, {"ok": True})
+        if path == "/api/ocr/remove":
+            for jid in d.get("ids", []):
+                OCRS.remove(jid)
+            return self._send(200, {"ok": True})
+        if path == "/api/ocr/clear":
+            mode = d.get("mode", "done")
+            with OCRS.lock:
+                ids = [i for i in OCRS.order if OCRS.jobs[i].status not in ("running", "queued")
+                       and (mode == "all" or OCRS.jobs[i].status == "done")]
+            for jid in ids:
+                OCRS.remove(jid)
+            return self._send(200, {"removed": len(ids)})
+        if path == "/api/ocr/region":
+            j = OCRS.jobs.get(d.get("id", ""))
+            if j is None:
+                raise KeyError("Không tìm thấy video")
+            r = [float(x) for x in d.get("region")]
+            if len(r) != 4 or not (0 <= r[0] < r[1] <= 1 and 0 <= r[2] < r[3] <= 1):
+                raise ValueError("Vùng quét không hợp lệ")
+            j.region = r
+            OCRS.save()
+            return self._send(200, {"ok": True})
+        if path == "/api/ocr/test":
+            j = OCRS.jobs.get(d.get("id", ""))
+            if j is None:
+                raise KeyError("Không tìm thấy video")
+            return self._send(200, ocr_test(j, float(d.get("t", 0)), d.get("region") or j.region, d.get("lang")))
+        if path == "/api/ocr/translate":
+            j = OCRS.jobs.get(d.get("id", ""))
+            if j is None:
+                raise KeyError("Không tìm thấy video")
+            job = OCRS.to_library(j, d.get("config") or {}, os.path.dirname(j.srt) if j.srt else None)
+            return self._send(200, {"libId": job.id})
+        if path == "/api/ocr/model":
+            lang = d.get("lang")
+            if lang not in OCR_MODELS:
+                raise ValueError("Model không hợp lệ")
+            if d.get("delete"):
+                for f in (ocr_model_path(lang), ocr_model_path(lang) + ".ok"):
+                    try:
+                        os.remove(f)
+                    except OSError:
+                        pass
+                _OCR_ENGINES.clear()
+            else:
+                TASKS.start("ocr:" + lang, f"Tải model chữ {OCR_MODELS[lang]['name']}", download_ocr_model_task(lang))
+            return self._send(200, {"ok": True})
+        return self._send(404, {"error": "not found"})
+
     def do_POST(self):
         u = urllib.parse.urlparse(self.path)
         try:
-            if u.path == "/api/stt/upload":
+            if u.path in ("/api/stt/upload", "/api/ocr/upload"):
                 q = {k: v[0] for k, v in urllib.parse.parse_qs(u.query).items()}
-                return self._send(200, {"job": self._upload(q).summary()})
+                st = OCRS if u.path.startswith("/api/ocr") else STT
+                return self._send(200, {"job": self._upload(q, st).summary()})
             d = self._json()
             if u.path == "/api/config":
                 save_config(d)
@@ -4114,6 +4749,8 @@ class Handler(BaseHTTPRequestHandler):
                     raise ValueError("Địa chỉ không hợp lệ")
                 webbrowser.open(url)
                 return self._send(200, {"ok": True})
+            if u.path.startswith("/api/ocr/"):
+                return self._ocr_post(u.path, d)
             if u.path == "/api/stt/pick":
                 try:
                     paths = pick_files_dialog()
@@ -4250,7 +4887,10 @@ def already_running(url):
 
 
 def main():
-    global STATE, STT
+    global STATE, STT, OCRS
+    if "--ocr-worker" in sys.argv:
+        ocr_worker_main(int(sys.argv[sys.argv.index("--ocr-worker") + 1]))
+        return
     if "--stt-worker" in sys.argv:
         stt_worker_main(int(sys.argv[sys.argv.index("--stt-worker") + 1]))
         return
@@ -4278,6 +4918,7 @@ def main():
         url = f"http://127.0.0.1:{server.server_address[1]}/"
     STATE = State()
     STT = SttState()
+    OCRS = OcrState()
     setup_cuda_path()
     threading.Thread(target=office_info, daemon=True).start()
     server.daemon_threads = True
@@ -4304,13 +4945,14 @@ def main():
             if UPDATE_EXIT.is_set():
                 break
             idle = time.time() - max(STATE.last_ping, START_TIME)
-            if idle > 150 and STATE.running is None and STATE.q.empty() and not STT.busy() \
+            if idle > 150 and STATE.running is None and STATE.q.empty() and not STT.busy() and not OCRS.busy() \
                     and "--no-window" not in sys.argv:
                 break
     except KeyboardInterrupt:
         pass
     release_worker()
     STT.request_stop()
+    OCRS.request_stop()
     server.shutdown()
 
 

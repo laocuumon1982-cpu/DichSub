@@ -4,19 +4,21 @@ import os
 from PyInstaller.utils.hooks import collect_dynamic_libs, collect_submodules, collect_data_files
 
 ROOT = os.path.abspath(SPECPATH)
-NAME = 'Dich Viet by Duy Anh'
+NAME = 'DichSub'
 MODE = os.environ.get('DICHVIET_MODE', 'onefile')
 EXCLUDES = [
     'torch', 'torchvision', 'torchaudio', 'functorch', 'tensorflow', 'tensorboard', 'keras', 'tf_keras',
     'transformers', 'safetensors', 'jax', 'jaxlib', 'onnx', 'hf_xet', 'pydantic_core',
-    'triton', 'numba', 'llvmlite', 'scipy', 'sklearn', 'pandas', 'matplotlib', 'cv2', 'sympy',
+    'triton', 'numba', 'llvmlite', 'scipy', 'sklearn', 'pandas', 'matplotlib', 'sympy',
     'IPython', 'jupyter', 'notebook', 'pytest', 'pydantic', 'rich', 'pygments', 'jinja2', 'cryptography',
     'tkinter', 'opennmt', 'fairseq', 'sacremoses', 'spacy', 'nltk', 'playwright', 'PyQt5', 'PyQt6',
     'PySide2', 'PySide6', 'wx', 'gi', 'h5py', 'grpc', 'boto3', 'botocore', 'sqlalchemy',
 ]
-binaries = collect_dynamic_libs('ctranslate2') + collect_dynamic_libs('av') + collect_dynamic_libs('onnxruntime')
+binaries = collect_dynamic_libs('ctranslate2') + collect_dynamic_libs('av') + collect_dynamic_libs('onnxruntime') + \
+    collect_dynamic_libs('shapely')
 datas = [(os.path.join(ROOT, 'ui.html'), '.')] + collect_data_files('reportlab') + \
-    collect_data_files('faster_whisper') + collect_data_files('opencc')
+    collect_data_files('faster_whisper') + collect_data_files('opencc') + \
+    collect_data_files('rapidocr') + [(os.path.join(ROOT, 'en_words.txt.gz'), '.')]
 
 a = Analysis(
     [os.path.join(ROOT, 'dich_viet.py')],
@@ -24,7 +26,7 @@ a = Analysis(
     binaries=binaries,
     datas=datas,
     hiddenimports=['ctranslate2', 'sentencepiece', 'pypdf', 'av', 'onnxruntime', 'tokenizers', 'opencc', 'numpy'] +
-        collect_submodules('faster_whisper') + collect_submodules('reportlab', filter=lambda m: not m.startswith(('reportlab.graphics', 'reportlab.lib.testutils'))),
+        collect_submodules('faster_whisper') + collect_submodules('rapidocr', filter=lambda m: not any(x in m for x in ('pytorch', 'paddle', 'openvino', 'tensorrt', '.mnn', 'mnn_'))) + ['cv2', 'pyclipper', 'shapely'] + collect_submodules('reportlab', filter=lambda m: not m.startswith(('reportlab.graphics', 'reportlab.lib.testutils'))),
     excludes=EXCLUDES,
     noarchive=False,
 )

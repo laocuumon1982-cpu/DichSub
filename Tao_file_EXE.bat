@@ -1,7 +1,7 @@
 @echo off
 chcp 65001 >nul
 cd /d "%~dp0"
-title Tao file exe - Dich Viet by Duy Anh v3.1
+title Tao file exe - Dich Sub & Book v3.2 by Duy Anh
 set "PY="
 where py >nul 2>nul && set "PY=py -3"
 if not defined PY where python >nul 2>nul && set "PY=python"
@@ -10,10 +10,10 @@ if not defined PY (
   pause
   exit /b 1
 )
-set "NAME=Dich Viet by Duy Anh"
+set "NAME=DichSub"
 
 echo [1/4] Cai cong cu build va thu vien (HachimiMT, Whisper)...
-%PY% -m pip install -U pyinstaller ctranslate2 sentencepiece pypdf reportlab pillow faster-whisper opencc-python-reimplemented
+%PY% -m pip install -U pyinstaller ctranslate2 sentencepiece pypdf reportlab pillow faster-whisper opencc-python-reimplemented rapidocr
 if errorlevel 1 goto :loi
 if exist build_out rmdir /s /q build_out
 
@@ -28,7 +28,7 @@ set "DICHVIET_MODE=onedir"
 if errorlevel 1 goto :loi
 set "PORT=build_out\portable\%NAME%"
 > "%PORT%\portable.ini" echo [DichSub]
->> "%PORT%\portable.ini" echo ; Ban portable: cau hinh, model HachimiMT, Whisper va thu vien GPU luu trong thu muc data ben canh.
+>> "%PORT%\portable.ini" echo ; Ban portable: cau hinh, model HachimiMT, Whisper, OCR va thu vien GPU luu trong thu muc data ben canh.
 if not exist "%PORT%\data" mkdir "%PORT%\data"
 copy /y HUONG_DAN.txt "%PORT%\" >nul
 

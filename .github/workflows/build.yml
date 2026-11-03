@@ -38,7 +38,7 @@ jobs:
 
       - name: Cài thư viện
         if: env.SKIP != 'True'
-        run: python -m pip install -U pyinstaller ctranslate2 sentencepiece pypdf reportlab pillow faster-whisper opencc-python-reimplemented
+        run: python -m pip install -U pyinstaller ctranslate2 sentencepiece pypdf reportlab pillow faster-whisper opencc-python-reimplemented rapidocr
 
       - name: Build exe 1 file và bản portable
         if: env.SKIP != 'True'
@@ -49,39 +49,42 @@ jobs:
           python -m PyInstaller --noconfirm --distpath out/onefile --workpath out/w1 DichViet.spec
           $env:DICHVIET_MODE = "onedir"
           python -m PyInstaller --noconfirm --distpath out/portable --workpath out/w2 DichViet.spec
-          $p = "out/portable/Dich Viet by Duy Anh"
-          Set-Content -Path "$p/portable.ini" -Value "[DichViet]`r`n; Ban portable: cau hinh, tai lieu, model HachimiMT, Whisper va thu vien GPU luu trong thu muc data ben canh."
+          $p = "out/portable/DichSub"
+          Set-Content -Path "$p/portable.ini" -Value "[DichSub]`r`n; Ban portable: cau hinh, tai lieu, model HachimiMT, Whisper, OCR va thu vien GPU luu trong thu muc data ben canh."
           New-Item -ItemType Directory -Force "$p/data" | Out-Null
           Set-Content -Path "$p/data/README.txt" -Value "Du lieu cua ban portable (cau hinh, tai lieu, model). Khong xoa thu muc nay khi cap nhat."
           Copy-Item HUONG_DAN.txt $p
-          Rename-Item $p "Dich Viet by Duy Anh Portable"
-          Compress-Archive -Path "out/portable/Dich Viet by Duy Anh Portable" -DestinationPath "out/DichViet-Portable.zip"
-          Copy-Item "out/onefile/Dich Viet by Duy Anh.exe" "out/DichViet.exe"
+          Rename-Item $p "DichSub Portable"
+          Compress-Archive -Path "out/portable/DichSub Portable" -DestinationPath "out/DichSub-Portable.zip"
+          Copy-Item "out/onefile/DichSub.exe" "out/DichSub.exe"
           Get-ChildItem out/*.exe, out/*.zip | Format-Table Name, Length
 
       - name: Thử chạy bản exe
         if: env.SKIP != 'True'
         shell: pwsh
         run: |
-          $p = Start-Process -FilePath "out/DichViet.exe" -ArgumentList "--no-window" -PassThru
+          $p = Start-Process -FilePath "out/DichSub.exe" -ArgumentList "--no-window" -PassThru
           $ok = $false
           for ($i = 0; $i -lt 60; $i++) {
             Start-Sleep 2
             try { $r = Invoke-RestMethod http://127.0.0.1:47863/api/stt/info; $ok = $true; break } catch {}
           }
+          if ($ok) { $o = Invoke-RestMethod http://127.0.0.1:47863/api/ocr/info }
           Stop-Process -Id $p.Id -Force
           if (-not $ok) { throw "exe không chạy được" }
           $r.libs | Format-List
-          if (-not ($r.libs.faster_whisper -and $r.libs.av -and $r.libs.ctranslate2)) { throw "thiếu thư viện trong exe" }
+          $o.libs | Format-List
+          if (-not ($r.libs.faster_whisper -and $r.libs.av -and $r.libs.ctranslate2)) { throw "thiếu thư viện Whisper trong exe" }
+          if (-not ($o.libs.rapidocr -and $o.libs.cv2 -and $o.libs.onnxruntime)) { throw "thiếu thư viện quét chữ trong exe" }
 
       - name: Lưu file build
         if: env.SKIP != 'True' && env.RELEASE != 'True'
         uses: actions/upload-artifact@v4
         with:
-          name: DichViet-windows
+          name: DichSub-windows
           path: |
-            out/DichViet.exe
-            out/DichViet-Portable.zip
+            out/DichSub.exe
+            out/DichSub-Portable.zip
 
       - name: Đăng bản phát hành
         if: env.RELEASE == 'True'
@@ -89,5 +92,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
         run: |
-          gh release create "$env:VER" out/DichViet.exe out/DichViet-Portable.zip `
-            --target "${{ github.sha }}" --title "Dịch Việt $env:VER" --notes-file RELEASE_NOTES.md
+          gh release create "$env:VER" out/DichSub.exe out/DichSub-Portable.zip `
+            --target "${{ github.sha }}" --title "Dịch Sub & Book $env:VER" --notes-file RELEASE_NOTES.md

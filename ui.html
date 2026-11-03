@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Dịch Việt by Duy Anh v3.1</title>
+<title>Dịch Sub & Book v3.2 by Duy Anh</title>
 <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTYgMjU2Ij4KICA8cGF0aCBkPSJNMzAgOCBIMTUwIEEyMiAyMiAwIDAgMSAxNzIgMzAgVjYwIEg2MCBWMTcyIEgzMCBBMjIgMjIgMCAwIDEgOCAxNTAgVjMwIEEyMiAyMiAwIDAgMSAzMCA4IFoiIGZpbGw9IiNFOUVERjMiIHN0cm9rZT0iI0M5RDFERCIgc3Ryb2tlLXdpZHRoPSI2Ii8+CiAgPHJlY3QgeD0iNDQiIHk9IjQ0IiB3aWR0aD0iMjA0IiBoZWlnaHQ9IjIwNCIgcng9IjQwIiBmaWxsPSIjREEyNTFEIi8+CiAgPHBhdGggZD0iTTczLjI1IDczLjQ1Qzc5LjQgODIuMCA4Ni45IDkzLjg1MDAwMDAwMDAwMDAxIDg5LjkgMTAxLjM1MDAwMDAwMDAwMDAxTDEwNC42IDkxLjNDMTAxLjMgODQuMTAwMDAwMDAwMDAwMDEgOTMuNSA3Mi44NTAwMDAwMDAwMDAwMSA4Ny4wNSA2NC42MDAwMDAwMDAwMDAwMVpNMTQ5LjE0OTk5OTk5OTk5OTk4IDEyNy42VjEzOS40NUgxMjIuM1YxNTUuMDVIMTQ5LjE0OTk5OTk5OTk5OTk4VjE2Ni4zSDExNC41QzExMy4xNSAxNjMuNDUgMTExLjk0OTk5OTk5OTk5OTk5IDE2MC4zIDExMS4wNSAxNTcuNzVMMTAyLjM1IDE2NC45NVYxMDguNEg2Ny44NVYxMjUuNjVIODQuOTVWMTcxLjg1Qzg0Ljk1IDE3OS45NSA4MC40NSAxODUuNjUgNzcuMyAxODguNUM4MC4wIDE5MS4yIDg0LjggMTk3LjY1IDg2LjQ1IDIwMS4yNUM4OC43IDE5Ny44IDkyLjkgMTkzLjc1IDExMy45IDE3Ni4yVjE4Mi4ySDE0OS4xNDk5OTk5OTk5OTk5OFYyMDMuNUgxNjYuODVWMTgyLjJIMjA1LjU0OTk5OTk5OTk5OTk4VjE2Ni4zSDE2Ni44NVYxNTUuMDVIMTk1LjVWMTM5LjQ1SDE2Ni44NVYxMjcuNlpNMTc0LjggODQuMTAwMDAwMDAwMDAwMDFDMTcwLjQ1IDg5LjIgMTY1LjIgOTQuMCAxNTkuMiA5OC4zNTAwMDAwMDAwMDAwMUMxNTMuMiA5NC4xNSAxNDcuOTUgODkuMzUwMDAwMDAwMDAwMDEgMTQzLjYgODQuMTAwMDAwMDAwMDAwMDFaTTExNC4zNSA2OC42NVY4NC4xMDAwMDAwMDAwMDAwMUgxMjUuNkMxMzEuMCA5Mi42NSAxMzcuNDUgMTAwLjQ1IDE0NS4xIDEwNy4wNUMxMzMuMSAxMTMuNSAxMTkuNiAxMTguMyAxMDUuOTQ5OTk5OTk5OTk5OTkgMTIxLjQ1QzEwOS40IDEyNS4wNSAxMTMuNDQ5OTk5OTk5OTk5OTkgMTMyLjI1IDExNS40IDEzNi43NUMxMzEuMCAxMzIuNCAxNDYuMTQ5OTk5OTk5OTk5OTggMTI2LjEgMTU5LjUgMTE3Ljg1MDAwMDAwMDAwMDAxQzE3MC44OTk5OTk5OTk5OTk5OCAxMjQuOSAxODMuOCAxMzAuMyAxOTguMiAxMzMuNzVDMjAwLjYgMTI5LjI1IDIwNS41NDk5OTk5OTk5OTk5OCAxMjIuMiAyMDkuMjk5OTk5OTk5OTk5OTggMTE4LjYwMDAwMDAwMDAwMDAxQzE5Ni41NDk5OTk5OTk5OTk5OCAxMTYuMiAxODQuNyAxMTIuMyAxNzQuMzUgMTA3LjM1MDAwMDAwMDAwMDAxQzE4NS40NSA5OC4wNSAxOTQuNiA4Ny4xMDAwMDAwMDAwMDAwMSAyMDAuOSA3NC4yTDE4OS4zNSA2Ny45TDE4Ni4zNSA2OC42NVoiIGZpbGw9IiNGRkNEMDAiLz4KPC9zdmc+Cg==">
 <style>
 :root{
@@ -256,6 +256,27 @@ textarea{resize:vertical;min-height:70px;line-height:1.45}
 /* ---------- giọng nói -> phụ đề */
 .work.mode-stt > #welcome,.work.mode-stt > #docView{display:none!important}
 .work:not(.mode-stt) > #sttView{display:none!important}
+.work.mode-ocr > #welcome,.work.mode-ocr > #docView{display:none!important}
+.work:not(.mode-ocr) > #ocrView{display:none!important}
+#ocrView{display:flex;flex-direction:column;flex:1;min-height:0}
+.dochead .ic.ocr{background:#E3F1EA;color:#1D7A4E}
+:root[data-theme="dark"] .dochead .ic.ocr{background:#173326;color:#6FD3A0}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .dochead .ic.ocr{background:#173326;color:#6FD3A0}}
+#ocrItems .mi .ic{background:#E3F1EA;color:#1D7A4E}
+:root[data-theme="dark"] #ocrItems .mi .ic{background:#173326;color:#6FD3A0}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) #ocrItems .mi .ic{background:#173326;color:#6FD3A0}}
+.ocr-frame{flex:none;background:var(--screen);padding:10px 14px 12px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.ocr-pic{position:relative;max-width:100%;line-height:0;cursor:crosshair;user-select:none;border-radius:4px;overflow:hidden}
+.ocr-pic img{max-width:100%;max-height:34vh;display:block;pointer-events:none}
+.ocr-pic .box{position:absolute;border:2px solid #FF4D4D;background:rgba(255,77,77,.10);box-shadow:0 0 0 9999px rgba(0,0,0,.35);pointer-events:none}
+.ocr-pic .box span{position:absolute;left:4px;top:-20px;font:600 11px/16px var(--head);color:#fff;background:#FF4D4D;padding:0 6px;border-radius:3px;white-space:nowrap}
+.ocr-pic.load img{opacity:.5}
+.ocr-ctl{display:flex;align-items:center;gap:10px;width:100%;max-width:900px;color:#B9C1CE;font-size:12px}
+.ocr-ctl input[type=range]{flex:1;accent-color:#F2C230}
+.ocr-ctl .tcode{font:500 12px var(--head);min-width:64px;color:#E3E8F0}
+.ocr-ctl .btn{background:#1C2436;border-color:#2C3650;color:#E3E8F0}
+.ocr-res{width:100%;max-width:900px;color:#FFE27A;font:600 15px/1.35 var(--body);text-align:center;min-height:20px;white-space:pre-line}
+.ocr-res.muted{color:#7D879A;font-weight:400;font-size:12.5px}
 #sttView{display:flex;flex-direction:column;flex:1;min-height:0}
 .dochead .ic.stt{background:#FBE3E1;color:#B3261E}
 :root[data-theme="dark"] .dochead .ic.stt{background:#3A1D1C;color:#F59A92}
@@ -275,6 +296,7 @@ textarea{resize:vertical;min-height:70px;line-height:1.45}
 .mi .stage.err{color:var(--err);white-space:normal}
 .stt-prev{display:flex;flex-direction:column;min-width:0;min-height:0}
 .stt-prev .rows .r{grid-template-columns:52px 124px 1fr}
+.stt-prev .rows .r.cur{background:var(--sel)}
 .stt-prev .rows .r .tm{white-space:pre}
 .stt-empty{flex:1;display:grid;place-items:center;padding:30px}
 .stt-empty .card{max-width:600px;width:100%;text-align:center}
@@ -317,7 +339,7 @@ textarea{resize:vertical;min-height:70px;line-height:1.45}
   <rect x="98" y="98" width="146" height="146" rx="30" fill="#DA251D" stroke="#FFFFFF" stroke-width="8"/>
   <path d="M126.80799999999999 148.804C126.25 151.098 125.134 154.26 124.20400000000001 156.554H123.026V148.494C126.622 148.122 130.032 147.564 132.946 146.94400000000002L129.288 142.046C123.46000000000001 143.348 113.85 144.34 105.728 144.836C106.41 146.076 107.092 148.246 107.278 149.61C110.316 149.548 113.53999999999999 149.362 116.826 149.114V156.554H111.866L114.78 155.686C114.346 154.136 113.354 151.532 112.548 149.548L107.774 150.788C108.456 152.586 109.2 154.942 109.634 156.554H105.542V161.948H113.85C111.30799999999999 165.048 107.712 168.272 104.55 170.132C105.48 171.868 106.72 174.65800000000002 107.278 176.58V200.016H112.734V197.102H126.622V199.334H132.388V175.03H109.51C112.114 172.736 114.656 169.698 116.826 166.598V174.1H123.026V166.90800000000002C125.568 169.202 128.296 171.868 129.66 173.48000000000002L133.38 167.714C132.202 166.784 127.862 163.87 124.762 161.948H132.76V156.554H129.474L132.202 150.416ZM117.322 188.298V191.584H112.734V188.298ZM122.344 188.298H126.622V191.584H122.344ZM117.322 183.524H112.734V180.548H117.322ZM122.344 183.524V180.548H126.622V183.524ZM132.946 180.548 135.86 185.632C137.65800000000002 183.772 139.642 181.726 141.626 179.556V192.7C141.626 193.506 141.378 193.754 140.696 193.754C139.952 193.816 137.72 193.816 135.612 193.692C136.418 195.366 137.286 198.156 137.472 199.83C141.06799999999998 199.83 143.548 199.644 145.346 198.59C147.082 197.598 147.578 195.738 147.578 192.824V179.68L150.368 184.516L155.824 178.874V192.576C155.824 193.444 155.514 193.692 154.708 193.692C153.964 193.692 151.36 193.754 148.942 193.63C149.81 195.304 150.802 198.28 150.988 199.954C154.894 199.954 157.56 199.768 159.482 198.714C161.404 197.66 161.9 195.8 161.9 192.638V144.588H148.88V150.788H155.824V166.846C155.266 163.746 153.964 159.034 152.786 155.438L148.074 156.368C149.252 160.336 150.492 165.606 150.926 168.768L155.824 167.528V171.062C152.724 174.224 149.686 177.262 147.578 179.184V144.464H134.434V150.664H141.626V166.04C140.82 163.002 139.394 158.848 138.09199999999998 155.624L133.442 156.802C134.93 160.708 136.48 165.978 137.038 169.14000000000001L141.626 167.714V171.496C138.34 175.03 135.11599999999999 178.44 132.946 180.548Z M175.65 146.386C178.192 149.92000000000002 181.292 154.818 182.532 157.918L188.608 153.764C187.244 150.788 184.02 146.138 181.35399999999998 142.728ZM207.022 168.768V173.666H195.924V180.114H207.022V184.764H192.7C192.142 183.586 191.64600000000002 182.284 191.274 181.23L187.678 184.20600000000002V160.832H173.418V167.962H180.486V187.058C180.486 190.406 178.626 192.762 177.324 193.94C178.44 195.056 180.424 197.722 181.106 199.21C182.036 197.784 183.772 196.11 192.452 188.856V191.336H207.022V200.14000000000001H214.338V191.336H230.334V184.764H214.338V180.114H226.18V173.666H214.338V168.768ZM217.624 150.788C215.826 152.89600000000002 213.656 154.88 211.176 156.678C208.696 154.942 206.526 152.958 204.728 150.788ZM192.638 144.402V150.788H197.288C199.52 154.322 202.186 157.546 205.348 160.274C200.388 162.94 194.808 164.924 189.166 166.226C190.59199999999998 167.714 192.266 170.69 193.072 172.55C199.52 170.752 205.78199999999998 168.148 211.3 164.738C216.012 167.652 221.344 169.88400000000001 227.296 171.31C228.288 169.45 230.334 166.536 231.88400000000001 165.048C226.614 164.056 221.716 162.44400000000002 217.438 160.398C222.026 156.554 225.808 152.02800000000002 228.412 146.696L223.638 144.092L222.398 144.402Z" fill="#FFCD00"/>
 </svg>
-<b>Dịch Việt</b><em>by Duy Anh</em><span class="ver">v3.1</span></div>
+<b>Dịch Sub &amp; Book</b><em>by Duy Anh</em><span class="ver">v3.2</span></div>
     <div class="spacer"></div>
     <button class="btn ghost sm" id="updBtn" title="Kiểm tra bản mới trên GitHub"><svg class="i" viewBox="0 0 24 24"><path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14"/></svg><span id="updTxt">Cập nhật</span><span class="dotu" id="updDot" hidden></span></button>
     <button class="btn ghost sm" id="refreshTop" title="Tải lại danh sách và tài liệu đang mở"><svg class="i" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/></svg>Làm mới</button>
@@ -328,6 +350,7 @@ textarea{resize:vertical;min-height:70px;line-height:1.45}
     <nav class="rail" aria-label="Điều hướng">
       <button data-p="lib" class="on" data-tip="Tài liệu"><svg class="i" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></button>
       <button data-p="stt" data-tip="Giọng nói ra phụ đề (video, âm thanh)"><svg class="i" viewBox="0 0 24 24"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3M8 21h8"/></svg><span class="badge" id="sttBadge" hidden></span></button>
+      <button data-p="ocr" data-tip="Quét phụ đề in sẵn trong video (OCR)"><svg class="i" viewBox="0 0 24 24"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M8 10h8M8 14h5"/></svg><span class="badge" id="ocrBadge" hidden></span></button>
       <button data-p="svc" data-tip="Dịch vụ dịch"><svg class="i" viewBox="0 0 24 24"><path d="M4 5h8M8 3v2M6 5c0 4 2 7 6 9M10 5c-1 4-3 7-6 9M13 21l4-9 4 9M14.5 18h5"/></svg></button>
       <button data-p="style" data-tip="Văn phong và từ điển"><svg class="i" viewBox="0 0 24 24"><path d="M2 5h6a3 3 0 0 1 3 3v12a2 2 0 0 0-2-2H2zM22 5h-6a3 3 0 0 0-3 3v12a2 2 0 0 1 2-2h7z"/></svg></button>
       <button data-p="out" data-tip="Xuất file"><svg class="i" viewBox="0 0 24 24"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 19h16"/></svg></button>
@@ -370,6 +393,20 @@ textarea{resize:vertical;min-height:70px;line-height:1.45}
             <label class="check" style="margin-top:0"><input type="checkbox" id="sttNext"> Lưu file SRT cạnh file video</label>
             <label class="check"><input type="checkbox" id="sttTr"> <span id="sttTrLabel">Tự dịch sang tiếng Việt</span></label>
             <div class="hint" id="sttTrHint"></div></div>
+        </div>
+        <!-- Quét phụ đề (OCR) -->
+        <div class="pv" id="p-ocr">
+          <div class="sec"><h3>Chữ phụ đề trong phim</h3><div class="seg grid" id="ocrLang"><button data-v="multi">Trung, Nhật</button><button data-v="en">Tiếng Anh</button><button data-v="ko">Tiếng Hàn</button><button data-v="vi">Tiếng Việt</button></div>
+            <div id="ocrModels"></div></div>
+          <div class="sec"><h3>Quét mỗi</h3><div class="seg" id="ocrStep"><button data-v="0.1">0,1 giây</button><button data-v="0.2">0,2 giây</button><button data-v="0.5">0,5 giây</button></div>
+            <div class="hint">0,1 giây: thời gian sát nhất. 0,5 giây: quét nhanh hơn. Phim 1 giờ thường mất 3–10 phút.</div></div>
+          <div class="sec"><h3>Màu chữ phụ đề</h3><div class="seg" id="ocrBright"><button data-v="200">Trắng, vàng</button><button data-v="160">Màu nhạt khác</button></div>
+            <div class="hint">Phụ đề in sẵn thường là chữ sáng có viền tối. Chữ màu xanh, hồng nhạt thì chọn "Màu nhạt khác".</div></div>
+          <div class="sec"><h3>Chữ Trung</h3><div class="seg" id="ocrZh"><button data-v="keep">Giữ nguyên</button><button data-v="s">Giản thể</button><button data-v="t">Phồn thể</button></div></div>
+          <div class="sec"><h3>Sau khi quét xong</h3>
+            <label class="check" style="margin-top:0"><input type="checkbox" id="ocrNext"> Lưu file SRT cạnh file video</label>
+            <label class="check"><input type="checkbox" id="ocrTr"> <span id="ocrTrLabel">Tự dịch sang tiếng Việt</span></label>
+            <div class="hint" id="ocrTrHint"></div></div>
         </div>
         <!-- Dịch vụ -->
         <div class="pv" id="p-svc">
@@ -450,6 +487,52 @@ textarea{resize:vertical;min-height:70px;line-height:1.45}
         </div>
       </div>
 
+      <div id="ocrView">
+        <div class="dochead">
+          <div class="ic ocr"><svg class="i" viewBox="0 0 24 24"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M8 10h8M8 14h5"/></svg></div>
+          <div class="ttl"><h2>Quét phụ đề trong video</h2><div class="meta" id="ocrMeta"></div></div>
+          <div class="acts">
+            <button class="btn" id="ocrAdd"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Thêm video</button>
+            <button class="btn primary" id="ocrRun"><svg class="i" viewBox="0 0 24 24" style="fill:currentColor;stroke:none"><path d="M7 4.5v15l12-7.5z"/></svg><span>Quét phụ đề</span></button>
+            <button class="btn" id="ocrStop">Dừng</button>
+            <button class="btn ghost" id="ocrMore" title="Thêm" aria-label="Thêm"><svg class="i" viewBox="0 0 24 24"><path d="M12 6h.01M12 12h.01M12 18h.01"/></svg></button>
+          </div>
+        </div>
+        <div class="stt-empty" id="ocrEmpty">
+          <div class="card">
+            <h1>Quét phụ đề in sẵn trong video ra file SRT</h1>
+            <p>Đọc chữ phụ đề cháy sẵn trên hình (hardsub), ghi lại đúng thời gian từng câu. Xong có thể dịch luôn sang tiếng Việt.</p>
+            <div class="bigdrop" id="ocrDrop" tabindex="0" role="button">
+              <b>Kéo thả video vào đây</b><span style="color:var(--muted)">hoặc bấm để chọn, chọn được nhiều video một lúc</span>
+              <div class="fmts"><span class="m">MP4</span><span class="m">MKV</span><span class="m">AVI</span><span class="m">MOV</span><span class="m">WMV</span><span class="m">TS</span><span class="m">FLV</span><span class="m">WEBM</span></div>
+            </div>
+            <div class="langs-row">Đọc tốt: <b>Trung</b>·<b>Nhật</b>·<b>Anh</b>·<b>Hàn</b>·<b>Việt</b></div>
+          </div>
+        </div>
+        <div class="stt-body" id="ocrBody" hidden>
+          <div class="stt-list"><div class="outline-h"><span>Hàng đợi</span><span id="ocrCount"></span></div><div class="stt-items" id="ocrItems"></div></div>
+          <div class="stt-prev">
+            <div class="etool">
+              <div class="chname" id="ocrSelName"></div>
+              <button class="btn sm" id="ocrDl">Tải SRT</button>
+              <button class="btn sm" id="ocrFolder">Mở thư mục</button>
+              <button class="btn sm primary" id="ocrTrBtn">Dịch sang tiếng Việt</button>
+            </div>
+            <div class="ocr-frame">
+              <div class="ocr-pic" id="ocrPic"><img id="ocrImg" alt="Khung hình video"><div class="box" id="ocrBox"><span>Vùng quét phụ đề</span></div></div>
+              <div class="ocr-ctl">
+                <span class="tcode" id="ocrT">00:00:00</span>
+                <input type="range" id="ocrSeek" min="0" max="100" step="0.1" value="0" aria-label="Chọn khung hình">
+                <button class="btn sm" id="ocrTest">Thử đọc chữ</button>
+                <button class="btn sm" id="ocrReset" title="Vùng mặc định: 1/4 dưới khung hình">Vùng mặc định</button>
+              </div>
+              <div class="ocr-res muted" id="ocrRes">Kéo chuột trên hình để khoanh vùng có chữ phụ đề, kéo thanh trượt tìm cảnh có chữ rồi bấm "Thử đọc chữ".</div>
+            </div>
+            <div class="rows stt-rows" id="ocrRows"></div>
+          </div>
+        </div>
+      </div>
+
       <div id="docView" hidden style="display:flex;flex-direction:column;flex:1;min-height:0">
         <div class="dochead">
           <div class="ic" id="dIc"></div>
@@ -490,6 +573,7 @@ textarea{resize:vertical;min-height:70px;line-height:1.45}
     <span id="sDocs"></span>
   </footer>
 </div>
+<input type="file" id="videoIn" multiple hidden accept="video/*,.mkv,.ts,.m2ts,.rmvb,.flv,.wmv,.vob">
 <input type="file" id="mediaIn" multiple hidden accept="video/*,audio/*,.mkv,.ts,.m2ts,.rmvb,.flv,.wmv,.amr,.ac3,.dts,.mka">
 <input type="file" id="fileIn" multiple hidden accept=".srt,.ass,.ssa,.vtt,.epub,.docx,.doc,.docm,.dot,.dotx,.dotm,.rtf,.odt,.wps,.txt,.pdf,.md,.markdown,.html,.htm,.mobi,.prc,.azw,.azw3">
 <div class="lost" id="lost" hidden>Mất kết nối với app (app đã bị tắt). Hãy đóng cửa sổ này và mở lại app.</div>
@@ -557,7 +641,7 @@ const job = () => jobs.find(j => j.id === sel);
 const fmtTime = s => { if(s == null) return ""; s = Math.round(s); const h = Math.floor(s/3600), m = Math.floor(s%3600/60); return h ? `${h} giờ ${m} phút` : (m ? `${m} phút` : `${s} giây`); };
 
 /* ---------------- điều hướng */
-const PANELS = {lib:"Tài liệu", stt:"Giọng nói ra phụ đề", svc:"Dịch vụ dịch", style:"Văn phong và từ điển", out:"Xuất file", log:"Nhật ký"};
+const PANELS = {lib:"Tài liệu", stt:"Giọng nói ra phụ đề", ocr:"Quét phụ đề (OCR)", svc:"Dịch vụ dịch", style:"Văn phong và từ điển", out:"Xuất file", log:"Nhật ký"};
 function showPanel(p, toggle=false){
   const mid = $("#mid"), cur = $(".rail button.on")?.dataset.p;
   if(toggle && cur === p && !mid.classList.contains("nopanel")){ mid.classList.add("nopanel"); $(".rail button.on")?.classList.remove("on"); return; }
@@ -565,21 +649,22 @@ function showPanel(p, toggle=false){
   $$(".rail button[data-p]").forEach(b => b.classList.toggle("on", b.dataset.p === p));
   $$(".pv").forEach(v => v.classList.toggle("on", v.id === "p-" + p));
   $("#panelTitle").textContent = PANELS[p];
-  if(p === "stt") setMode("stt"); else if(p === "lib" || p === "style") setMode("doc");
+  if(p === "stt" || p === "ocr") setMode(p); else if(p === "lib" || p === "style") setMode("doc");
   if(p === "log"){ $("#logBadge").hidden = true; const b = $(".panel-b"); b.scrollTop = b.scrollHeight; }
   if(p === "svc" && cfg.service === "hachimi") loadHachimi();
   try{ localStorage.setItem("panel", p); }catch(e){}
 }
 let mode = "doc";
 function setMode(m){
-  mode = m; $("#work").classList.toggle("mode-stt", m === "stt");
+  mode = m; $("#work").classList.toggle("mode-stt", m === "stt"); $("#work").classList.toggle("mode-ocr", m === "ocr");
   try{ localStorage.setItem("mode", m); }catch(e){}
   if(m === "stt"){ $("#sttBadge").hidden = true; renderStt(); if(!sttInfo) loadSttInfo(); }
+  if(m === "ocr"){ $("#ocrBadge").hidden = true; renderOcr(); if(!ocrInfo) loadOcrInfo(); }
 }
 $$(".rail button[data-p]").forEach(b => b.onclick = () => {
   const p = b.dataset.p;
   // đang ở chế độ khác thì bấm lần đầu chỉ chuyển chế độ, không đóng bảng
-  if((p === "stt" && mode !== "stt") || ((p === "lib" || p === "style") && mode === "stt")) return showPanel(p);
+  if(((p === "stt" || p === "ocr") && mode !== p) || ((p === "lib" || p === "style") && mode !== "doc")) return showPanel(p);
   showPanel(p, true);
 });
 $("#hidePanel").onclick = () => { $("#mid").classList.add("nopanel"); $(".rail button.on")?.classList.remove("on"); };
@@ -617,7 +702,7 @@ function renderServices(){
   $$("#svcList .svc").forEach(b => b.onclick = () => {
     cfg.service = b.dataset.id;
     if(cfg.service === "hachimi"){ cfg.source = "zh-CN"; cfg.target = "vi"; renderLangs(); }
-    saveCfg(); renderServices(); renderFields(); renderStatus(); renderSttPanel();
+    saveCfg(); renderServices(); renderFields(); renderStatus(); renderSttPanel(); renderOcrPanel();
   });
 }
 function renderFields(){
@@ -669,7 +754,7 @@ function renderLangs(){
   $("#tgtLang").innerHTML = LANGS.filter(l => l[0] !== "auto").map(([v,l]) => `<option value="${v}" ${cfg.target===v?"selected":""}>${l}</option>`).join("");
 }
 $("#srcLang").onchange = e => { cfg.source = e.target.value; saveCfg(); };
-$("#tgtLang").onchange = e => { cfg.target = e.target.value; saveCfg(); renderStatus(); renderSttPanel(); if(mode === "stt") renderStt(); };
+$("#tgtLang").onchange = e => { cfg.target = e.target.value; saveCfg(); renderStatus(); renderSttPanel(); renderOcrPanel(); if(mode === "stt") renderStt(); if(mode === "ocr") renderOcr(); };
 function segBind(id, key){
   const el = $(id);
   const paint = () => $$(id + " button").forEach(b => b.classList.toggle("on", b.dataset.v === cfg[key]));
@@ -1031,6 +1116,244 @@ function uploadMedia(list){
   if(list.length){ renderStt(); toast("Kéo thả thì app phải chép file vào trước. Bấm \"Thêm file\" để chọn thẳng từ ổ đĩa, nhanh hơn và lưu SRT được cạnh video."); }
 }
 
+/* ---------------- quét phụ đề (OCR) */
+let ocrJobs = [], ocrSel = null, ocrInfo = null, ocrInfoBusy = false, ocrUploads = [], ocrCues = [], ocrCueJob = null, ocrRowsKey = "";
+let ocrFrame = {id:null, t:0, dur:0}, ocrDrag = null;
+const DEF_REGION = [0.76, 0.98, 0.04, 0.96];
+function ocrCfg(){
+  const c = cfg.ocr = cfg.ocr || {};
+  c.lang = c.lang || "multi"; c.interval = c.interval || "0.2"; c.bright = c.bright || "200"; c.zhScript = c.zhScript || "keep";
+  if(c.saveNext === undefined) c.saveNext = true; if(c.translate === undefined) c.translate = false;
+  if(!Array.isArray(c.region)) c.region = DEF_REGION.slice();
+  return c;
+}
+function renderOcrPanel(){
+  const c = ocrCfg();
+  for(const [id, key] of [["#ocrLang","lang"],["#ocrStep","interval"],["#ocrBright","bright"],["#ocrZh","zhScript"]]){
+    $$(id + " button").forEach(b => b.classList.toggle("on", b.dataset.v === String(c[key])));
+    $(id).onclick = ev => { const b = ev.target.closest("button"); if(!b) return; c[key] = b.dataset.v; $$(id + " button").forEach(x => x.classList.toggle("on", x === b)); saveCfg(); renderOcrModels(); renderOcrHead(); };
+  }
+  $("#ocrNext").checked = c.saveNext; $("#ocrNext").onchange = ev => { c.saveNext = ev.target.checked; saveCfg(); };
+  $("#ocrTr").checked = c.translate; $("#ocrTr").onchange = ev => { c.translate = ev.target.checked; saveCfg(); renderOcrHead(); };
+  const tl = (LANGS.find(l => l[0] === cfg.target) || [0, "Tiếng Việt"])[1];
+  $("#ocrTrLabel").textContent = `Tự dịch sang ${tl.toLowerCase()}`;
+  $("#ocrTrHint").innerHTML = `Dịch bằng <b>${esc(SERVICES[cfg.service]?.name || "")}</b> (đổi ở mục Dịch vụ dịch).`;
+  renderOcrModels();
+}
+function renderOcrModels(){
+  const el = $("#ocrModels"), c = ocrCfg(); if(!el) return;
+  if(!ocrInfo){ el.innerHTML = `<div class="hint">Đang kiểm tra...</div>`; return; }
+  let h = "";
+  if(!ocrInfo.haveLibs) h += `<div class="hint" style="color:var(--err)">Thiếu thư viện quét chữ (rapidocr, opencv). ${ocrInfo.frozen ? "Hãy build lại exe." : "Chạy: pip install rapidocr"}</div>`;
+  h += `<div class="hint">"Trung, Nhật": model có sẵn, đọc được cả chữ Trung phồn thể và chữ Anh. Anh, Hàn, Việt: tải thêm model riêng (khoảng 10 MB) để đọc chính xác hơn.</div><div class="hm-box">`;
+  for(const m of ocrInfo.models){
+    const t = (ocrInfo.tasks || {})["ocr:" + m.lang], run = t && t.state === "running";
+    const a = run ? `<button class="btn sm ghost" data-ocr="cancel" data-key="ocr:${m.lang}">Huỷ</button>` : m.ready ? `<button class="btn sm ghost" data-ocr="del" data-lang="${m.lang}">Xoá</button>` : `<button class="btn sm" data-ocr="dl" data-lang="${m.lang}">Tải về máy</button>`;
+    h += `<div class="hm-row ${m.lang === c.lang ? "" : ""}"><div class="grow"><b>${esc(m.name)} ${m.ready ? `<span class="ok-chip">Đã tải</span>` : (m.lang === c.lang ? `<span class="warn-chip">Cần tải</span>` : "")}</b>${taskView(t)}</div>${a}</div>`;
+  }
+  el.innerHTML = h + `</div>`;
+}
+async function loadOcrInfo(){
+  if(ocrInfoBusy) return; ocrInfoBusy = true;
+  try{ ocrInfo = await api("/api/ocr/info"); renderOcrModels(); renderOcrHead(); }catch(e){}
+  ocrInfoBusy = false;
+}
+document.addEventListener("click", async e => {
+  const b = e.target.closest("[data-ocr]"); if(!b) return;
+  e.preventDefault(); const a = b.dataset.ocr;
+  try{
+    if(a === "dl") await api("/api/ocr/model", {lang:b.dataset.lang});
+    if(a === "del"){ if(!confirm("Xoá model này khỏi máy?")) return; await api("/api/ocr/model", {lang:b.dataset.lang, delete:true}); }
+    if(a === "cancel") await api("/api/hachimi/cancel", {key:b.dataset.key});
+  }catch(err){ toast(err.message, "err"); }
+  loadOcrInfo();
+});
+const OCR_LANG_NAME = {multi:"Trung, Nhật", en:"Tiếng Anh", ko:"Tiếng Hàn", vi:"Tiếng Việt"};
+function renderOcrHead(){
+  const c = ocrCfg();
+  $("#ocrMeta").innerHTML = `<span>Chữ: ${esc(OCR_LANG_NAME[c.lang])}</span><span>Quét mỗi ${String(c.interval).replace(".", ",")} giây</span>${c.translate ? `<span>Tự dịch bằng ${esc(SERVICES[cfg.service]?.name||"")}</span>` : ""}<a href="#" id="ocrCfgLink">Cài đặt</a>`;
+  $("#ocrCfgLink").onclick = ev => { ev.preventDefault(); showPanel("ocr"); };
+}
+function ocrRunCfg(){
+  const c = ocrCfg(), base = {lang:c.lang, interval:Number(c.interval), bright:Number(c.bright), zhScript:c.zhScript, saveNext:c.saveNext, outDir:cfg.outDir, region:c.region};
+  if(c.translate) base.translate = runCfg();
+  return base;
+}
+async function ocrStart(ids){
+  const c = ocrCfg();
+  if(!ocrInfo) await loadOcrInfo();
+  if(ocrInfo && !ocrInfo.haveLibs) return toast("Thiếu thư viện quét chữ.", "err");
+  const m = ocrInfo?.models.find(x => x.lang === c.lang);
+  if(m && !m.ready){ showPanel("ocr"); return toast(`Chưa tải model chữ ${m.name}. Bấm "Tải về máy" ở bảng bên trái.`, "err"); }
+  try{ const d = await api("/api/ocr/start", {ids, config:ocrRunCfg()}); if(!d.queued) toast("Không có video nào đang chờ quét."); poll(); }
+  catch(e){ toast(e.message, "err"); }
+}
+function renderOcr(){
+  const all = [...ocrUploads, ...ocrJobs], has = all.length > 0;
+  $("#ocrEmpty").hidden = has; $("#ocrBody").hidden = !has;
+  $("#ocrRun").disabled = !ocrJobs.some(j => ["ready","stopped","error"].includes(j.status));
+  $("#ocrStop").disabled = !ocrJobs.some(j => j.status === "running" || j.status === "queued");
+  renderOcrHead();
+  if(!has) return;
+  if(!ocrSel || !all.find(j => j.id === ocrSel)) ocrSel = (ocrJobs.find(j => j.status === "running") || all[0]).id;
+  $("#ocrCount").textContent = num(all.length);
+  $("#ocrItems").innerHTML = all.map(j => {
+    const pct = j.pct || 0, st = j.status, meta = [];
+    if(j.duration) meta.push(fmtDur(j.duration));
+    if(j.lang) meta.push(STT_LANG_NAME[j.lang] || j.lang);
+    if(st === "done") meta.push(num(j.cues) + " dòng");
+    if(st === "running" && j.cues) meta.push(num(j.cues) + " dòng");
+    let stage = st === "running" ? (j.stage || "Đang quét…") + (j.eta != null && j.pos > 5 ? `, còn khoảng ${fmtTime(j.eta)}` : "") : st === "uploading" ? `Đang chép vào app… ${pct}%` : st === "error" ? j.error : "";
+    return `<div class="mi ${j.id===ocrSel?"sel":""}" data-id="${j.id}"><div class="ic">${MICON.video}</div>
+      <div style="min-width:0"><div class="nm" title="${esc(j.path || j.name)}">${esc(j.name)}</div>
+      <div class="meta">${meta.map(x => `<span>${esc(x)}</span>`).join("")}<span class="st ${st === "uploading" ? "running" : st}">${st === "running" ? pct + "%" : (st === "running" ? "" : (STT_STATUS[st] || st)).replace("Chờ tạo","Chờ quét").replace("Đang nghe","Đang quét")}</span></div>
+      ${stage ? `<div class="stage ${st === "error" ? "err" : ""}" title="${esc(stage)}">${esc(stage)}</div>` : ""}
+      <div class="bar ${st==="done"?"done":""}"><i style="width:${st === "done" ? 100 : pct}%"></i></div></div></div>`;
+  }).join("");
+  renderOcrSel();
+}
+function selOcr(){ return ocrJobs.find(x => x.id === ocrSel); }
+function renderOcrSel(){
+  const j = selOcr() || ocrUploads.find(x => x.id === ocrSel); if(!j) return;
+  $("#ocrSelName").textContent = j.name;
+  $("#ocrDl").disabled = !j.cues || j.status !== "done"; $("#ocrFolder").disabled = !j.srt && !j.path;
+  const tl = (LANGS.find(l => l[0] === cfg.target) || [0, "Tiếng Việt"])[1];
+  $("#ocrTrBtn").textContent = j.libId && jobs.find(x => x.id === j.libId) ? "Mở bản dịch" : `Dịch sang ${tl.toLowerCase()}`;
+  $("#ocrTrBtn").disabled = j.status !== "done";
+  if(j.status === "uploading") return;
+  if(ocrFrame.id !== j.id){ ocrFrame = {id:j.id, t:0, dur:j.duration || 0}; $("#ocrRes").className = "ocr-res muted";
+    $("#ocrRes").textContent = "Kéo chuột trên hình để khoanh vùng có chữ phụ đề, kéo thanh trượt tìm cảnh có chữ rồi bấm \"Thử đọc chữ\".";
+    loadOcrFrame(j.duration ? Math.min(j.duration * 0.25, 120) : 60); }
+  paintOcrBox();
+  const busy = j.status === "running" || j.status === "queued";
+  $("#ocrPic").style.cursor = busy ? "default" : "crosshair";
+  loadOcrCues(j);
+}
+function jobRegion(j){ return (j && j.region) || ocrCfg().region; }
+function paintOcrBox(r){
+  const j = selOcr(); r = r || jobRegion(j); const b = $("#ocrBox");
+  b.style.top = (r[0]*100) + "%"; b.style.height = ((r[1]-r[0])*100) + "%"; b.style.left = (r[2]*100) + "%"; b.style.width = ((r[3]-r[2])*100) + "%";
+}
+let frameReq = 0;
+async function loadOcrFrame(t){
+  const j = selOcr(); if(!j) return;
+  const my = ++frameReq; $("#ocrPic").classList.add("load");
+  try{
+    const r = await fetch(`/api/ocr/frame?id=${j.id}&t=${t}&w=960`); if(!r.ok) throw new Error((await r.json()).error);
+    const dur = parseFloat(r.headers.get("X-Duration") || "0"), blob = await r.blob();
+    if(my !== frameReq) return;
+    const old = $("#ocrImg").src; $("#ocrImg").src = URL.createObjectURL(blob); if(old.startsWith("blob:")) URL.revokeObjectURL(old);
+    ocrFrame.t = Math.min(t, dur || t); ocrFrame.dur = dur;
+    $("#ocrSeek").max = Math.max(1, dur); $("#ocrSeek").value = ocrFrame.t; $("#ocrT").textContent = tcode(ocrFrame.t).slice(0, 8);
+  }catch(e){ $("#ocrRes").className = "ocr-res muted"; $("#ocrRes").textContent = "Không đọc được khung hình: " + e.message; }
+  if(my === frameReq) $("#ocrPic").classList.remove("load");
+}
+let seekT;
+$("#ocrSeek").oninput = e => { const t = +e.target.value; $("#ocrT").textContent = tcode(t).slice(0, 8); clearTimeout(seekT); seekT = setTimeout(() => loadOcrFrame(t), 180); };
+$("#ocrTest").onclick = async () => {
+  const j = selOcr(); if(!j) return;
+  $("#ocrRes").className = "ocr-res muted"; $("#ocrRes").textContent = "Đang đọc chữ…";
+  try{ const d = await api("/api/ocr/test", {id:j.id, t:ocrFrame.t, region:jobRegion(j), lang:ocrCfg().lang});
+    if(d.text){ $("#ocrRes").className = "ocr-res"; $("#ocrRes").textContent = d.text; }
+    else{ $("#ocrRes").className = "ocr-res muted"; $("#ocrRes").textContent = "Không thấy chữ trong khung đỏ. Kéo thanh trượt tới cảnh có phụ đề, hoặc khoanh lại vùng chữ."; } }
+  catch(e){ $("#ocrRes").className = "ocr-res muted"; $("#ocrRes").textContent = e.message; }
+};
+async function setRegion(r){
+  const j = selOcr(); if(!j) return;
+  r = r.map(x => Math.round(Math.max(0, Math.min(1, x)) * 1000) / 1000);
+  j.region = r; ocrCfg().region = r; saveCfg(); paintOcrBox(r);
+  try{ await api("/api/ocr/region", {id:j.id, region:r}); }catch(e){ toast(e.message, "err"); }
+}
+$("#ocrReset").onclick = () => setRegion(DEF_REGION.slice());
+$("#ocrPic").addEventListener("mousedown", e => {
+  const j = selOcr(); if(!j || ["running","queued"].includes(j.status)) return;
+  const rc = $("#ocrImg").getBoundingClientRect(); if(!rc.width) return;
+  ocrDrag = {rc, x:(e.clientX - rc.left) / rc.width, y:(e.clientY - rc.top) / rc.height}; e.preventDefault();
+});
+function dragRegion(e){ const d = ocrDrag, x = (e.clientX - d.rc.left) / d.rc.width, y = (e.clientY - d.rc.top) / d.rc.height;
+  return [Math.min(d.y, y), Math.max(d.y, y), Math.min(d.x, x), Math.max(d.x, x)].map(v => Math.max(0, Math.min(1, v))); }
+document.addEventListener("mousemove", e => { if(ocrDrag) paintOcrBox(dragRegion(e)); });
+document.addEventListener("mouseup", e => {
+  if(!ocrDrag) return; const r = dragRegion(e); ocrDrag = null;
+  if(r[1] - r[0] < 0.03 || r[3] - r[2] < 0.1){ paintOcrBox(); return toast("Vùng quá nhỏ. Kéo chuột thành khung bao trọn dòng chữ phụ đề."); }
+  setRegion(r);
+});
+let ocrCueBusy = false;
+async function loadOcrCues(j){
+  if(ocrCueBusy) return;
+  if(ocrCueJob !== j.id){ ocrCueJob = j.id; ocrCues = []; ocrRowsKey = ""; $("#ocrRows").innerHTML = ""; }
+  const key = j.id + ":" + j.cues + ":" + j.status;
+  if(ocrRowsKey === key) return;
+  ocrCueBusy = true;
+  try{
+    const d = await api(`/api/ocr/cues?id=${j.id}&from=0`);
+    if(ocrCueJob !== j.id) return;
+    ocrCues = d.cues; ocrRowsKey = key;
+    const box = $("#ocrRows"), atEnd = box.scrollTop + box.clientHeight >= box.scrollHeight - 40;
+    if(!ocrCues.length){ box.innerHTML = `<div class="noresult">${j.status === "running" ? "Đang quét, câu đầu tiên sẽ hiện ở đây…" : "Chưa có phụ đề. Khoanh vùng chữ rồi bấm Quét phụ đề."}</div>`; }
+    else box.innerHTML = ocrCues.map(([a, b, t], k) => `<div class="r" data-k="${k}"><div class="n">${k + 1}</div><div class="tm">${tcode(a)}\n${tcode(b)}</div><div class="v">${esc(t)}</div></div>`).join("");
+    if(atEnd && j.status === "running") box.scrollTop = box.scrollHeight;
+  }catch(e){}
+  finally{ ocrCueBusy = false; }
+}
+$("#ocrRows").addEventListener("click", e => { const r = e.target.closest(".r"); if(!r) return; const c = ocrCues[+r.dataset.k]; if(!c) return;
+  $$("#ocrRows .r.cur").forEach(x => x.classList.remove("cur")); r.classList.add("cur"); loadOcrFrame(Math.min(c[1] - 0.05, c[0] + 0.4)); });
+$("#ocrItems").onclick = e => { const m = e.target.closest(".mi"); if(!m) return; ocrSel = m.dataset.id; renderOcr(); };
+$("#ocrItems").oncontextmenu = e => { const m = e.target.closest(".mi"); if(!m) return; e.preventDefault(); ocrSel = m.dataset.id; renderOcr();
+  const j = selOcr(); if(!j) return;
+  menu(m, [
+    ...(["ready","stopped","error","done"].includes(j.status) ? [{label: j.status === "done" ? "Quét lại" : "Quét video này", run:() => ocrStart([j.id])}] : []),
+    ...(j.srt ? [{label:"Mở thư mục chứa SRT", run:() => api("/api/open_folder", {path:j.srt})}] : []),
+    "-", {label:"Xoá khỏi hàng đợi", cls:"danger", run:async () => { if(["running","queued"].includes(j.status)) return toast("Video đang quét, hãy bấm Dừng trước."); await api("/api/ocr/remove", {ids:[j.id]}); poll(); }},
+  ]); };
+$("#ocrRun").onclick = () => ocrStart(ocrJobs.filter(j => ["ready","stopped","error"].includes(j.status)).map(j => j.id));
+$("#ocrStop").onclick = () => api("/api/ocr/stop", {}).then(poll);
+$("#ocrDl").onclick = () => { if(ocrSel) location.href = "/api/ocr/srt?id=" + ocrSel; };
+$("#ocrFolder").onclick = () => { const j = selOcr(); if(j) api("/api/open_folder", {path:j.srt || j.path || cfg.outDir}).catch(e => toast(e.message, "err")); };
+$("#ocrTrBtn").onclick = async () => {
+  const j = selOcr(); if(!j) return;
+  if(j.libId && jobs.find(x => x.id === j.libId)){ showPanel("lib"); return openDoc(j.libId); }
+  try{ const d = await api("/api/ocr/translate", {id:j.id, config:runCfg()}); await poll(); showPanel("lib"); openDoc(d.libId); toast("Đã thêm phụ đề vào Tài liệu và bắt đầu dịch.", "ok"); }
+  catch(e){ toast(e.message, "err"); }
+};
+$("#ocrMore").onclick = e => { e.stopPropagation(); menu(e.currentTarget, [
+  {label:"Xoá các video đã quét xong", hint:`${ocrJobs.filter(j => j.status === "done").length} video`, run:async () => { await api("/api/ocr/clear", {mode:"done"}); poll(); }},
+  {label:"Xoá tất cả", cls:"danger", run:async () => { if(!confirm("Xoá tất cả khỏi hàng đợi? Video và file SRT đã lưu trên máy không bị ảnh hưởng.")) return; await api("/api/ocr/clear", {mode:"all"}); poll(); }},
+  "-", {label:"Cài đặt quét phụ đề", run:() => showPanel("ocr")},
+]); };
+async function ocrAddFiles(){
+  try{
+    const d = await api("/api/ocr/pick", {});
+    if(d.noDialog) return $("#videoIn").click();
+    d.errors.forEach(x => toast(x, "err"));
+    if(d.added.length){ ocrSel = d.added[0].id; await poll(); toast(`Đã thêm ${d.added.length} video. Kiểm tra khung đỏ trùng dòng phụ đề rồi bấm "Quét phụ đề".`, "ok"); }
+  }catch(e){ $("#videoIn").click(); }
+}
+$("#ocrAdd").onclick = ocrAddFiles;
+$("#ocrDrop").onclick = ocrAddFiles; $("#ocrDrop").onkeydown = e => { if(e.key === "Enter" || e.key === " "){ e.preventDefault(); ocrAddFiles(); } };
+["dragenter","dragover"].forEach(ev => document.addEventListener(ev, () => $("#ocrDrop").classList.add("over")));
+document.addEventListener("dragleave", e => { if(!e.relatedTarget) $("#ocrDrop").classList.remove("over"); });
+document.addEventListener("drop", () => $("#ocrDrop").classList.remove("over"));
+$("#videoIn").onchange = () => { uploadVideos([...$("#videoIn").files]); $("#videoIn").value = ""; };
+const VIDEO_OK = /\.(mp4|mkv|avi|mov|wmv|flv|webm|ts|m2ts|mts|mpe?g|m4v|3gp|vob|rmvb|rm)$/i;
+function uploadVideos(list){
+  const bad = list.filter(f => !VIDEO_OK.test(f.name)); if(bad.length) toast("Không phải video: " + bad.map(f => f.name).join(", "), "err");
+  list = list.filter(f => VIDEO_OK.test(f.name));
+  for(const f of list){
+    const u = {id:"up" + Math.random().toString(36).slice(2), name:f.name, status:"uploading", pct:0};
+    ocrUploads.push(u); ocrSel = u.id;
+    const x = new XMLHttpRequest(); x.open("POST", "/api/ocr/upload?name=" + encodeURIComponent(f.name));
+    x.upload.onprogress = e => { if(e.lengthComputable){ u.pct = Math.floor(e.loaded * 100 / e.total); if(mode === "ocr") renderOcr(); } };
+    x.onload = async () => { ocrUploads = ocrUploads.filter(y => y !== u);
+      try{ const d = JSON.parse(x.responseText); if(x.status !== 200) throw new Error(d.error || "Lỗi tải lên"); ocrSel = d.job.id; }
+      catch(e){ toast(`${f.name}: ${e.message}`, "err"); }
+      await poll(); };
+    x.onerror = () => { ocrUploads = ocrUploads.filter(y => y !== u); toast(`${f.name}: không chép được vào app`, "err"); renderOcr(); };
+    x.send(f);
+  }
+  if(list.length) renderOcr();
+}
+
 /* ---------------- cập nhật */
 let upd = null, updTimer = null;
 const MODE_TXT = {onefile:"bản 1 file exe", portable:"bản portable", onedir:"bản thư mục", source:"chạy bằng Python"};
@@ -1041,7 +1364,7 @@ async function checkUpdate(force, quiet){
     $("#updTxt").textContent = upd.newer ? `Có bản ${upd.latest}` : "Cập nhật";
     if(upd.error && !quiet) toast(upd.error, "err");
     if(upd.newer && quiet){ let seen = null; try{ seen = localStorage.getItem("updSeen"); }catch(e){}
-      if(seen !== upd.latest){ toast(`Có bản mới Dịch Việt ${upd.latest}. Bấm "Có bản ${upd.latest}" ở góc trên để cập nhật.`, "ok"); try{ localStorage.setItem("updSeen", upd.latest); }catch(e){} } }
+      if(seen !== upd.latest){ toast(`Có bản mới Dịch Sub & Book ${upd.latest}. Bấm "Có bản ${upd.latest}" ở góc trên để cập nhật.`, "ok"); try{ localStorage.setItem("updSeen", upd.latest); }catch(e){} } }
   }catch(e){ if(!quiet) toast(e.message, "err"); }
   return upd;
 }
@@ -1062,7 +1385,7 @@ $("#updBtn").onclick = async e => {
 };
 async function runUpdate(){
   const notes = upd.notes ? "\n\nCó gì mới:\n" + upd.notes.slice(0, 600) : "";
-  if(!confirm(`Cập nhật Dịch Việt từ ${upd.current} lên ${upd.latest}?\nApp sẽ tải bản mới (${upd.asset ? fmtMB(upd.asset.size) : ""}), cài đặt rồi tự khởi động lại. Tài liệu, model và cài đặt được giữ nguyên.` + notes)) return;
+  if(!confirm(`Cập nhật Dịch Sub & Book từ ${upd.current} lên ${upd.latest}?\nApp sẽ tải bản mới (${upd.asset ? fmtMB(upd.asset.size) : ""}), cài đặt rồi tự khởi động lại. Tài liệu, model và cài đặt được giữ nguyên.` + notes)) return;
   try{ await api("/api/update/run", {}); }catch(e){ return toast(e.message, "err"); }
   clearInterval(updTimer);
   updTimer = setInterval(async () => {
@@ -1103,7 +1426,8 @@ document.addEventListener("drop", e => {
   const fs = [...(e.dataTransfer?.files || [])]; if(!fs.length) return;
   $("#sttDrop").classList.remove("over");
   const media = fs.filter(f => MEDIA_OK.test(f.name)), docs = fs.filter(f => !MEDIA_OK.test(f.name));
-  if(media.length){ showPanel("stt"); uploadMedia(media); }
+  if(media.length && mode === "ocr"){ uploadVideos(media); }
+  else if(media.length){ showPanel("stt"); uploadMedia(media); }
   if(docs.length) addFiles(docs);
 });
 const MEDIA_OK = /\.(mp4|mkv|avi|mov|wmv|flv|webm|ts|m2ts|mts|mpe?g|m4v|3gp|vob|rmvb|rm|mp3|wav|m4a|aac|flac|ogg|opus|wma|amr|ac3|dts|mka|aiff?)$/i;
@@ -1352,7 +1676,8 @@ function renderStatus(){
   if(r){ const pct = r.total ? Math.floor(r.done * 100 / r.total) : 0;
     $("#sRun").innerHTML = `Đang dịch <b>${esc(r.name)}</b>: ${num(r.done)} / ${num(r.total)} (${pct}%)${r.rate ? `, ${Math.round(r.rate)} ${r.kind === "sub" ? "dòng" : "đoạn"}/phút` : ""}${r.eta != null ? `, còn khoảng ${fmtTime(r.eta)}` : ""}`; }
   else $("#sRun").textContent = jobs.some(j => j.status === "queued") ? "Đang chờ dịch…" : "";
-  const sr = sttJobs.find(j => j.status === "running");
+  const orr = ocrJobs.find(j => j.status === "running");
+  const sr = sttJobs.find(j => j.status === "running") || (orr && {...orr, name: orr.name + " (quét chữ)"});
   if(sr && !r) $("#sRun").innerHTML = `Đang tạo phụ đề <b>${esc(sr.name)}</b>: ${sr.pct}%${sr.device ? " bằng " + esc(sr.device) : ""}${sr.eta != null && sr.pos > 5 ? `, còn khoảng ${fmtTime(sr.eta)}` : ""}`;
   else if(sr && r) $("#sRun").innerHTML += ` · Phụ đề <b>${esc(sr.name)}</b> ${sr.pct}%`;
   const w = hmData?.worker; $("#sGpu").textContent = cfg.service === "hachimi" && w ? `HachimiMT chạy bằng ${w.device}` : "";
@@ -1374,6 +1699,15 @@ async function poll(){
         if(j.status === "error") toast(`${j.name}\n${j.error}`, "err");
       } }
     if(mode === "stt") renderStt();
+    const prevOcr = Object.fromEntries(ocrJobs.map(j => [j.id, j.status]));
+    ocrJobs = d.ocr || [];
+    for(const j of ocrJobs){ const pv = prevOcr[j.id];
+      if(pv && pv !== j.status){
+        if(j.status === "done"){ toast(`Đã quét phụ đề ${j.name}: ${num(j.cues)} dòng` + (j.srt ? `\nĐã lưu: ${j.srt}` : ""), "ok"); if(mode !== "ocr") $("#ocrBadge").hidden = false; }
+        if(j.status === "error") toast(`${j.name}\n${j.error}`, "err");
+      } }
+    if(mode === "ocr") renderOcr();
+    if(ocrInfo && mode === "ocr" && Object.values(ocrInfo.tasks || {}).some(t => t.state === "running")) loadOcrInfo();
     if(sttInfo && mode === "stt" && sttCfg().engine === "local" && Object.values(sttInfo.tasks || {}).some(t => t.state === "running")) loadSttInfo();
     jobs = d.jobs; running = d.running; pollFails = 0; $("#lost").hidden = true; $("#connDot").classList.remove("off");
     for(const j of jobs){ const prev = lastStatuses[j.id];
@@ -1418,12 +1752,12 @@ async function poll(){
   cfg.source = cfg.source || "auto"; cfg.target = cfg.target || "vi";
   cfg.format = cfg.format || "orig"; cfg.content = cfg.content || "vi"; if(cfg.autosave === undefined) cfg.autosave = true;
   try{ lastWin = JSON.stringify(cfg.win || {}); }catch(e){}
-  renderServices(); renderFields(); renderLangs(); segBind("#fmtSeg", "format"); segBind("#contentSeg", "content"); renderStyle(); renderSttPanel();
+  renderServices(); renderFields(); renderLangs(); segBind("#fmtSeg", "format"); segBind("#contentSeg", "content"); renderStyle(); renderSttPanel(); renderOcrPanel();
   $("#autosave").checked = cfg.autosave; $("#outDir").value = cfg.outDir || "";
   await poll();
   let last = null; try{ last = localStorage.getItem("doc"); }catch(e){}
   if(jobs.length) openDoc(jobs.find(j => j.id === last) ? last : jobs[0].id);
-  try{ const p = localStorage.getItem("panel"); if(p && PANELS[p] && p !== "lib") showPanel(p); if(localStorage.getItem("mode") === "stt") setMode("stt"); }catch(e){}
+  try{ const p = localStorage.getItem("panel"); if(p && PANELS[p] && p !== "lib") showPanel(p); const m = localStorage.getItem("mode"); if(m === "stt" || m === "ocr") setMode(m); }catch(e){}
   setInterval(poll, 800);
   setTimeout(() => checkUpdate(false, true), 2500);
 })();

@@ -1,9 +1,9 @@
-DỊCH VIỆT BY DUY ANH v3.1 — dịch phụ đề, sách, truyện sang tiếng Việt và tạo phụ đề từ video
+DỊCH SUB & BOOK v3.2 BY DUY ANH — dịch phụ đề, sách, truyện sang tiếng Việt, tạo phụ đề từ video
 =========================================================================
 
 CHẠY APP
-- Bản 1 file: bấm đúp "Dich Viet by Duy Anh.exe".
-- Bản portable: mở thư mục "Dich Viet by Duy Anh Portable", bấm đúp file exe bên trong.
+- Bản 1 file: bấm đúp "DichSub.exe".
+- Bản portable: mở thư mục "DichSub Portable", bấm đúp file DichSub.exe bên trong.
   Mọi dữ liệu (tủ tài liệu, tiến độ dịch, model HachimiMT, thư viện GPU) nằm trong thư mục data
   bên cạnh, chép cả thư mục sang USB hay máy khác là dùng tiếp được.
 - Tải bản mới nhất (exe và portable): https://github.com/laocuumon1982-cpu/DichSub/releases/latest
@@ -58,6 +58,19 @@ Nghe tốt tiếng Trung, Nhật, Hàn, Anh, Việt.
    Tài liệu và dịch bằng dịch vụ đang chọn, bản dịch lưu cạnh video (Phim.vi.srt).
 Mẹo: phim tiếng Trung nên chọn large-v3 + chữ giản thể, rồi dịch bằng HachimiMT hoặc Gemini.
 
+QUÉT PHỤ ĐỀ TRONG VIDEO - OCR (biểu tượng khung quét trên thanh trái)
+Đọc chữ phụ đề in sẵn trên hình (hardsub, phim Trung, Hàn... có chữ cháy sẵn) ra file SRT đúng thời gian.
+1. Bấm "Thêm video" để chọn video trên máy (SRT lưu cạnh video, ví dụ Phim.mp4 -> Phim.zh.srt;
+   nếu đã có file cùng tên thì lưu thành Phim.zh.ocr.srt).
+2. Khung đỏ trên hình là vùng quét. Kéo thanh trượt tới cảnh có phụ đề, kéo chuột trên hình để khoanh
+   vừa dòng chữ (bỏ logo, chữ chạy). Bấm "Thử đọc chữ" để xem app đọc có đúng không.
+3. Chọn chữ trong phim: "Trung, Nhật" có sẵn (đọc được cả phồn thể và chữ Anh).
+   Tiếng Anh, Hàn, Việt: bấm "Tải về máy" model riêng (khoảng 10 MB) để đọc chính xác hơn.
+4. Bấm "Quét phụ đề". Phim 1 giờ thường mất 3–10 phút (chạy bằng CPU). Có thể bấm Dừng bất cứ lúc nào.
+5. Bấm vào một dòng trong danh sách để xem lại khung hình đúng lúc đó. Tick "Tự dịch sang tiếng Việt"
+   hoặc bấm "Dịch sang tiếng Việt" để dịch luôn.
+Mẹo: chữ màu lạ (xanh, hồng) thì chọn "Màu nhạt khác". Quét mỗi 0,1 giây cho thời gian sát nhất.
+
 VĂN PHONG VÀ TỪ ĐIỂN (riêng cho từng tài liệu, biểu tượng cuốn sách trên thanh trái)
 - Văn phong: Tự nhiên hiện đại / Kiếm hiệp cổ trang / Ngôn tình / Sát nghĩa (áp dụng khi dịch bằng AI).
 - Ghi chú cho AI: tên tác phẩm, bối cảnh, quan hệ nhân vật.
@@ -89,3 +102,4 @@ KHI GẶP LỖI
 Ghi chú: cách gọi GTX/Edge API tham khảo từ dự án rockbenben/subtitle-translator (MIT License).
 Model HachimiMT của ngocdang83 trên Hugging Face (CC-BY-4.0).
 Nhận giọng nói: Whisper của OpenAI (MIT License) chạy bằng faster-whisper của SYSTRAN (MIT License).
+Quét chữ: RapidOCR (Apache-2.0) với model PaddleOCR (Apache-2.0). Danh sách từ tiếng Anh: wordninja (MIT).

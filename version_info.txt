@@ -1,16 +1,16 @@
 VSVersionInfo(
-  ffi=FixedFileInfo(filevers=(3, 1, 0, 0), prodvers=(3, 1, 0, 0), mask=0x3f, flags=0x0, OS=0x40004,
+  ffi=FixedFileInfo(filevers=(3, 2, 0, 0), prodvers=(3, 2, 0, 0), mask=0x3f, flags=0x0, OS=0x40004,
                     fileType=0x1, subtype=0x0, date=(0, 0)),
   kids=[
     StringFileInfo([StringTable('040904B0', [
       StringStruct('CompanyName', 'Duy Anh'),
-      StringStruct('FileDescription', 'Dich Viet by Duy Anh v3.1'),
-      StringStruct('FileVersion', '3.1.0'),
-      StringStruct('InternalName', 'DichViet'),
+      StringStruct('FileDescription', 'Dich Sub & Book v3.2 by Duy Anh'),
+      StringStruct('FileVersion', '3.2.0'),
+      StringStruct('InternalName', 'DichSub'),
       StringStruct('LegalCopyright', 'Duy Anh'),
-      StringStruct('OriginalFilename', 'Dich Viet by Duy Anh.exe'),
-      StringStruct('ProductName', 'Dich Viet by Duy Anh'),
-      StringStruct('ProductVersion', '3.1.0')])]),
+      StringStruct('OriginalFilename', 'DichSub.exe'),
+      StringStruct('ProductName', 'Dich Sub & Book by Duy Anh'),
+      StringStruct('ProductVersion', '3.2.0')])]),
     VarFileInfo([VarStruct('Translation', [1033, 1200])])
   ]
 )
