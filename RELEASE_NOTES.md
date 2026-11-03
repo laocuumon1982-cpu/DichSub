@@ -3,7 +3,11 @@
 - **DichSub.exe**: bản 1 file, bấm đúp là chạy.
 - **DichSub-Portable.zip**: bản portable, giải nén rồi mở `DichSub.exe` bên trong. Mọi dữ liệu nằm trong thư mục `data`, chép sang USB hay máy khác là dùng tiếp.
 
-Đang dùng bản 3.1: bấm nút "Có bản 3.2.0" ở góc trên app để tự cập nhật, giữ nguyên dữ liệu.
+Đang dùng bản 3.1: bấm nút "Có bản 3.2.1" ở góc trên app để tự cập nhật, giữ nguyên dữ liệu.
+
+## Có gì mới trong 3.2.1
+
+- Sửa lỗi: nếu bản cũ (3.0, 3.1) còn chạy ngầm thì mở bản mới vẫn hiện giao diện cũ, không thấy tab Giọng nói và Quét phụ đề. Giờ bản mới luôn mở đúng giao diện của nó; bản cũ đang rảnh (từ 3.2.1 trở đi) sẽ tự tắt nhường chỗ.
 
 ## Có gì mới trong 3.2.0
 

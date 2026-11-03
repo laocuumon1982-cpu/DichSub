@@ -36,7 +36,7 @@ import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-APP_VERSION = "3.2.0"
+APP_VERSION = "3.2.1"
 APP_NAME = "Dịch Sub & Book v3.2 by Duy Anh"
 GITHUB_REPO = "laocuumon1982-cpu/DichSub"     # nơi đăng bản mới (GitHub Releases)
 PORT = 47863
@@ -3901,7 +3901,7 @@ def update_task():
             raise RuntimeError("Tự cập nhật chỉ hỗ trợ Windows.")
         if not a:
             raise RuntimeError("Bản phát hành chưa có file cho kiểu cài đặt này.")
-        if (STATE and (STATE.running or not STATE.q.empty())) or (STT and STT.busy()) or (OCRS and OCRS.busy()):
+        if app_busy():
             raise RuntimeError("Đang dịch hoặc đang tạo phụ đề. Hãy đợi xong hoặc bấm Dừng rồi cập nhật.")
         upd = os.path.join(DATA_DIR, "update")
         shutil.rmtree(upd, ignore_errors=True)
@@ -4740,6 +4740,11 @@ class Handler(BaseHTTPRequestHandler):
                     if svc == "ollama" and ("10061" in msg or "refused" in msg.lower()):
                         msg = "Ollama chưa chạy. Cài tại ollama.com rồi mở Ollama từ Start Menu."
                     return self._send(200, {"models": [], "error": msg})
+            if u.path == "/api/quit":
+                if app_busy():
+                    return self._send(200, {"ok": False, "busy": True})
+                threading.Timer(0.3, UPDATE_EXIT.set).start()
+                return self._send(200, {"ok": True})
             if u.path == "/api/update/run":
                 TASKS.start("update", "Cập nhật app", update_task())
                 return self._send(200, {"ok": True})
@@ -4878,12 +4883,44 @@ def open_window(url):
     webbrowser.open(url)
 
 
-def already_running(url):
+def ping_info(url):
+    """Thông tin app đang chạy ở địa chỉ này (bất kỳ phiên bản nào), hoặc None."""
     try:
         with urllib.request.urlopen(url + "api/ping", timeout=2) as r:
-            return json.loads(r.read().decode()).get("app") == APP_NAME
+            return json.loads(r.read().decode())
+    except Exception:
+        return None
+
+
+def already_running(url):
+    return (ping_info(url) or {}).get("app") == APP_NAME
+
+
+class AppServer(ThreadingHTTPServer):
+    """Giữ cổng độc quyền. Mặc định Python bật SO_REUSEADDR, trên Windows làm 2 bản app cùng nghe một cổng
+    -> cửa sổ bản mới lại hiện giao diện của bản cũ đang chạy ngầm."""
+    allow_reuse_address = not IS_WIN     # Linux/macOS: chỉ để mở lại ngay cổng vừa đóng, không cho nghe chung
+    daemon_threads = True
+
+    def server_bind(self):
+        if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
+
+
+def ask_quit(url):
+    """Nhờ bản khác đang chạy (đang rảnh) tự tắt để nhả cổng. Bản cũ hơn 3.2.1 không có lệnh này."""
+    try:
+        req = urllib.request.Request(url + "api/quit", data=b"{}", method="POST",
+                                     headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=3) as r:
+            return bool(json.loads(r.read().decode()).get("ok"))
     except Exception:
         return False
+
+
+def app_busy():
+    return bool((STATE and (STATE.running or not STATE.q.empty())) or (STT and STT.busy()) or (OCRS and OCRS.busy()))
 
 
 def main():
@@ -4903,19 +4940,31 @@ def main():
         time.sleep(1)
     cleanup_old_update()
     url = f"http://127.0.0.1:{PORT}/"
+    other = ping_info(url)
+    if other and other.get("app") == APP_NAME and other.get("version") == APP_VERSION and not after_update:
+        open_window(url)        # đã mở rồi -> chỉ mở thêm cửa sổ
+        return
+    if other:
+        # một bản khác (cũ hơn hoặc vừa cập nhật xong) đang giữ cổng: nhờ nó tắt rồi chờ nhả cổng
+        log_file(f"Cổng {PORT} đang dùng bởi {other.get('app')} {other.get('version', '')}")
+        if after_update or ask_quit(url):
+            for _ in range(40):
+                if ping_info(url) is None:
+                    break
+                time.sleep(0.5)
     server = None
-    for _ in range(40 if after_update else 1):     # sau khi cập nhật: chờ bản cũ tắt hẳn, nhả cổng
+    for _ in range(10 if after_update else 2):
         try:
-            server = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
-            break
+            if ping_info(url) is None:
+                server = AppServer(("127.0.0.1", PORT), Handler)
+                break
         except OSError:
-            time.sleep(0.5)
-    if server is None:
-        if already_running(url):
-            open_window(url)
-            return
-        server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+            pass
+        time.sleep(0.5)
+    if server is None:      # bản cũ vẫn chạy (đang dịch...) -> dùng cổng khác, cửa sổ mới đúng bản này
+        server = AppServer(("127.0.0.1", 0), Handler)
         url = f"http://127.0.0.1:{server.server_address[1]}/"
+        log_file(f"Dùng cổng {server.server_address[1]} vì cổng {PORT} đang bận")
     STATE = State()
     STT = SttState()
     OCRS = OcrState()
