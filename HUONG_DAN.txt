@@ -1,0 +1,91 @@
+DỊCH VIỆT BY DUY ANH v3.1 — dịch phụ đề, sách, truyện sang tiếng Việt và tạo phụ đề từ video
+=========================================================================
+
+CHẠY APP
+- Bản 1 file: bấm đúp "Dich Viet by Duy Anh.exe".
+- Bản portable: mở thư mục "Dich Viet by Duy Anh Portable", bấm đúp file exe bên trong.
+  Mọi dữ liệu (tủ tài liệu, tiến độ dịch, model HachimiMT, thư viện GPU) nằm trong thư mục data
+  bên cạnh, chép cả thư mục sang USB hay máy khác là dùng tiếp được.
+- Tải bản mới nhất (exe và portable): https://github.com/laocuumon1982-cpu/DichSub/releases/latest
+- Tự build lại exe: cài Python 3.12 (tick "Add python.exe to PATH") rồi bấm đúp "Tao_file_EXE.bat".
+
+CẬP NHẬT
+- App tự kiểm tra bản mới trên GitHub mỗi lần mở. Có bản mới thì nút góc trên đổi thành "Có bản x.y.z".
+- Bấm nút đó, chọn "Cập nhật lên bản ...": app tải bản mới, cài đè và tự khởi động lại.
+  Tài liệu, tiến độ dịch, model, cài đặt đều giữ nguyên (bản portable giữ nguyên thư mục data).
+- Bản 1 file cập nhật file exe; bản portable cập nhật cả thư mục.
+
+ĐỊNH DẠNG HỖ TRỢ
+- Phụ đề: SRT, ASS/SSA, VTT. Giữ nguyên timeline, thẻ định dạng ({\an8}, <i>...).
+- Sách: EPUB, Word (DOC, DOCX, DOCM, DOT, DOTX, RTF, ODT), TXT, PDF (loại có chữ, không phải ảnh scan),
+  MOBI, PRC, AZW, AZW3 (Kindle không khoá DRM), Markdown, HTML.
+- Xuất ra: mặc định "Giữ như gốc" = vào file nào ra file đó: SRT ra SRT, PDF ra PDF, DOC ra DOC,
+  RTF ra RTF, EPUB ra EPUB, PRC ra PRC, MOBI ra MOBI... Hoặc chọn Word, PDF, EPUB, TXT.
+- File DOC, RTF, ODT và PDF dùng Microsoft Word có sẵn trên máy để đọc và lưu lại (giữ bố cục,
+  hình ảnh, bảng). Không có Word thì app dùng LibreOffice nếu đã cài (https://www.libreoffice.org);
+  riêng PDF khi không có Word vẫn dịch được, xuất PDF mới trình bày gọn gàng (không giữ bố cục cũ).
+  Chọn "Chỉ bản dịch" hoặc song ngữ (dịch trên gốc dưới / gốc trên dịch dưới).
+
+CÁCH DÙNG
+1. Kéo thả file vào app (được nhiều file một lúc).
+2. Chọn ngôn ngữ ở góc trên phải (mặc định: Tự nhận sang Tiếng Việt).
+3. Mục "Dịch vụ dịch" (biểu tượng chữ A thứ hai trên thanh trái): chọn bộ dịch.
+4. Bấm "Dịch". Dịch xong app tự lưu vào thư mục Downloads (đổi ở mục "Xuất file").
+   Hoặc bấm "Xuất" để tải file theo định dạng muốn.
+5. Bấm vào ô bản dịch để sửa tay (Ctrl+Enter lưu, Esc huỷ). "Đọc bản dịch" để đọc như sách.
+6. Sách dài: có thể chọn một chương rồi bấm "Dịch phần này".
+7. Tắt app giữa chừng không sao: mở lại, chọn tài liệu, bấm "Dịch tiếp".
+
+GIỌNG NÓI RA PHỤ ĐỀ (biểu tượng micro trên thanh trái)
+Tạo file SRT đúng thời gian từng câu từ video (MP4, MKV, AVI, MOV, TS...) hoặc âm thanh (MP3, WAV, M4A...).
+Nghe tốt tiếng Trung, Nhật, Hàn, Anh, Việt.
+1. Bấm "Thêm file" để chọn thẳng video trên máy (nhanh nhất, SRT được lưu ngay cạnh video,
+   ví dụ: Phim.mkv -> Phim.zh.srt). Kéo thả cũng được nhưng app phải chép file vào trước.
+2. Chọn bộ nhận giọng ở bảng bên trái:
+   - Whisper trên máy: offline, miễn phí, không giới hạn. Bấm "Tải về máy" một model:
+       large-v3-turbo (~1,6 GB)  khuyên dùng, nhanh và chính xác
+       large-v3      (~3,1 GB)  chính xác nhất cho tiếng Trung, Nhật, Hàn, cần GPU mạnh hơn
+       medium / small            cho máy không có card NVIDIA
+     Có card NVIDIA: bấm "Tải hỗ trợ GPU" (thư viện cuDNN + CUDA 12, khoảng 0,7–1,3 GB, tải một lần),
+     phim 1 giờ chỉ mất vài phút. Không có GPU vẫn chạy bằng CPU nhưng chậm hơn nhiều.
+   - Groq Whisper: có gói miễn phí, rất nhanh, cần key tại https://console.groq.com/keys
+     (âm thanh được gửi lên mạng; app tự cắt file dài và tự chờ khi bị giới hạn).
+   - OpenAI Whisper: trả phí theo phút.
+3. Chọn ngôn ngữ trong file (chọn đúng thì chính xác hơn "Tự nhận"), chữ Trung giản thể hoặc phồn thể,
+   độ dài dòng. Ô "Tên riêng, từ khó" giúp Whisper viết đúng tên nhân vật.
+4. Bấm "Tạo phụ đề". Câu hiện dần ở khung bên phải. Có thể bấm Dừng bất cứ lúc nào.
+5. Tick "Tự dịch sang tiếng Việt" (hoặc bấm "Dịch sang tiếng Việt" sau khi xong): phụ đề được đưa vào
+   Tài liệu và dịch bằng dịch vụ đang chọn, bản dịch lưu cạnh video (Phim.vi.srt).
+Mẹo: phim tiếng Trung nên chọn large-v3 + chữ giản thể, rồi dịch bằng HachimiMT hoặc Gemini.
+
+VĂN PHONG VÀ TỪ ĐIỂN (riêng cho từng tài liệu, biểu tượng cuốn sách trên thanh trái)
+- Văn phong: Tự nhiên hiện đại / Kiếm hiệp cổ trang / Ngôn tình / Sát nghĩa (áp dụng khi dịch bằng AI).
+- Ghi chú cho AI: tên tác phẩm, bối cảnh, quan hệ nhân vật.
+- Từ điển tên riêng: mỗi dòng "nguyên văn = bản dịch", ví dụ: 萧炎 = Tiêu Viêm.
+- Sửa sau khi dịch: "chữ sai = chữ đúng", tự thay trong bản dịch.
+
+CHỌN DỊCH VỤ NÀO?
+- GTX API (Free) / Edge API (Free): miễn phí, không cần key, rất nhanh, dịch sát nghĩa.
+- Google Gemini: dịch hay và tự nhiên nhất, key miễn phí tại https://aistudio.google.com/apikey
+- OpenAI / DeepSeek / Groq / OpenRouter / API tùy chỉnh: dán API key, bấm "Lấy danh sách".
+- Ollama / LM Studio: AI chạy trên card đồ họa (cài Ollama tại https://ollama.com/download,
+  mở CMD gõ: ollama pull gemma3:12b).
+- HachimiMT: chuyên truyện, phụ đề tiếng Trung sang Việt, chạy offline.
+    HachimiMT-60-QT     giọng cổ trang (ta, ngươi, hắn, nàng) cho kiếm hiệp, tiên hiệp
+    HachimiMT-60-zh-vi  xưng hô tự nhiên cho truyện, phim hiện đại
+  Bấm "Tải về máy" (~60 MB mỗi model). Có card NVIDIA thì bấm "Tải hỗ trợ GPU" (~600 MB), rồi mở lại app.
+  Dùng chung model với Dịch Sub nên không phải tải lại.
+
+KHI GẶP LỖI
+- Mục Nhật ký (biểu tượng danh sách trên thanh trái) ghi lại mọi việc app làm.
+- File log: %LOCALAPPDATA%\DichViet\dichviet.log (bản portable: data\dichviet.log).
+- Sách Kindle báo "HUFF/CDIC" hoặc "DRM": mở bằng Calibre, chuyển sang EPUB rồi thêm lại.
+- PDF báo "ảnh scan": cần chuyển sang chữ (OCR) trước.
+- Tạo phụ đề bằng GPU bị lỗi: app tự chuyển sang CPU. Cập nhật driver NVIDIA rồi thử lại;
+  card cũ (GTX 9xx trở xuống) có thể không chạy được Whisper bằng GPU.
+- Phụ đề có câu lạ ở đoạn nhạc, im lặng ("Cảm ơn đã xem", "字幕由..."): app đã tự lọc phần lớn,
+  câu còn sót hãy xoá tay trong file SRT.
+
+Ghi chú: cách gọi GTX/Edge API tham khảo từ dự án rockbenben/subtitle-translator (MIT License).
+Model HachimiMT của ngocdang83 trên Hugging Face (CC-BY-4.0).
+Nhận giọng nói: Whisper của OpenAI (MIT License) chạy bằng faster-whisper của SYSTRAN (MIT License).

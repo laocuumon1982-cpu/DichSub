@@ -1,0 +1,79 @@
+name: Build Windows
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Kiểm tra số phiên bản khớp với tag
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        run: |
+          $v = (Select-String -Path dich_viet.py -Pattern '^APP_VERSION = "(.+)"').Matches[0].Groups[1].Value
+          if ("v$v" -ne "${{ github.ref_name }}") { throw "APP_VERSION ($v) khác tag ${{ github.ref_name }}" }
+
+      - name: Cài thư viện
+        run: python -m pip install -U pyinstaller ctranslate2 sentencepiece pypdf reportlab pillow faster-whisper opencc-python-reimplemented
+
+      - name: Build exe 1 file và bản portable
+        shell: pwsh
+        run: |
+          python build_ui.py
+          $env:DICHVIET_MODE = "onefile"
+          python -m PyInstaller --noconfirm --distpath out/onefile --workpath out/w1 DichViet.spec
+          $env:DICHVIET_MODE = "onedir"
+          python -m PyInstaller --noconfirm --distpath out/portable --workpath out/w2 DichViet.spec
+          $p = "out/portable/Dich Viet by Duy Anh"
+          Set-Content -Path "$p/portable.ini" -Value "[DichViet]`r`n; Ban portable: cau hinh, tai lieu, model HachimiMT, Whisper va thu vien GPU luu trong thu muc data ben canh."
+          New-Item -ItemType Directory -Force "$p/data" | Out-Null
+          Set-Content -Path "$p/data/README.txt" -Value "Du lieu cua ban portable (cau hinh, tai lieu, model). Khong xoa thu muc nay khi cap nhat."
+          Copy-Item HUONG_DAN.txt $p
+          Rename-Item $p "Dich Viet by Duy Anh Portable"
+          Compress-Archive -Path "out/portable/Dich Viet by Duy Anh Portable" -DestinationPath "out/DichViet-Portable.zip"
+          Copy-Item "out/onefile/Dich Viet by Duy Anh.exe" "out/DichViet.exe"
+          Get-ChildItem out/*.exe, out/*.zip | Format-Table Name, Length
+
+      - name: Thử chạy bản exe
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath "out/DichViet.exe" -ArgumentList "--no-window" -PassThru
+          $ok = $false
+          for ($i = 0; $i -lt 60; $i++) {
+            Start-Sleep 2
+            try { $r = Invoke-RestMethod http://127.0.0.1:47863/api/stt/info; $ok = $true; break } catch {}
+          }
+          Stop-Process -Id $p.Id -Force
+          if (-not $ok) { throw "exe không chạy được" }
+          $r.libs | Format-List
+          if (-not ($r.libs.faster_whisper -and $r.libs.av -and $r.libs.ctranslate2)) { throw "thiếu thư viện trong exe" }
+
+      - name: Lưu file build (chạy tay)
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: DichViet-windows
+          path: |
+            out/DichViet.exe
+            out/DichViet-Portable.zip
+
+      - name: Đăng bản phát hành
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          gh release create "${{ github.ref_name }}" out/DichViet.exe out/DichViet-Portable.zip `
+            --title "Dịch Việt ${{ github.ref_name }}" --notes-file RELEASE_NOTES.md

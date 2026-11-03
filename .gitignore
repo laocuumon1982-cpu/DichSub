@@ -1,0 +1,9 @@
+__pycache__/
+build_out/
+out/
+build/
+dist/
+*.spec.bak
+Dich Viet by Duy Anh*.exe
+Dich Viet by Duy Anh Portable*/
+*.zip
