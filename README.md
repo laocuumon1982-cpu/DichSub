@@ -13,8 +13,8 @@ Hướng dẫn chi tiết: [HUONG_DAN.txt](HUONG_DAN.txt).
 ## Phát hành bản mới
 
 1. Sửa `APP_VERSION` trong `dich_viet.py` (ví dụ `3.2.0`) và ghi chú trong `RELEASE_NOTES.md`.
-2. Tạo tag cùng số: `git tag v3.2.0 && git push origin v3.2.0`.
-3. GitHub Actions tự build `DichViet.exe` và `DichViet-Portable.zip` rồi đăng lên Releases. App đang dùng sẽ thấy nút "Có bản 3.2.0".
+2. Đẩy lên nhánh `main`. GitHub Actions thấy số phiên bản mới sẽ tự build `DichViet.exe` và `DichViet-Portable.zip` rồi đăng lên Releases (tag `v3.2.0`). App đang dùng sẽ thấy nút "Có bản 3.2.0".
+3. Đẩy lên mà không đổi số phiên bản thì không phát hành gì. Muốn build thử: tab Actions, chọn "Build Windows", bấm "Run workflow" (file nằm trong Artifacts).
 
 Tự build trên máy: cài Python 3.12 rồi chạy `Tao_file_EXE.bat`.
 

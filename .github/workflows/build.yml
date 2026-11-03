@@ -2,6 +2,7 @@ name: Build Windows
 
 on:
   push:
+    branches: [main]
     tags: ["v*"]
   workflow_dispatch:
 
@@ -18,17 +19,29 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Kiểm tra số phiên bản khớp với tag
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Đọc số phiên bản, xem đã phát hành chưa
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: pwsh
         run: |
           $v = (Select-String -Path dich_viet.py -Pattern '^APP_VERSION = "(.+)"').Matches[0].Groups[1].Value
-          if ("v$v" -ne "${{ github.ref_name }}") { throw "APP_VERSION ($v) khác tag ${{ github.ref_name }}" }
+          "VER=v$v" >> $env:GITHUB_ENV
+          gh release view "v$v" --repo "${{ github.repository }}" *> $null
+          $exists = ($LASTEXITCODE -eq 0)
+          $global:LASTEXITCODE = 0
+          # Đẩy lên main mà số phiên bản chưa có bản phát hành -> build và phát hành. Đã có -> bỏ qua.
+          $release = (-not $exists) -and ("${{ github.event_name }}" -eq "push")
+          $skip = $exists -and ("${{ github.event_name }}" -eq "push")
+          "RELEASE=$release" >> $env:GITHUB_ENV
+          "SKIP=$skip" >> $env:GITHUB_ENV
+          Write-Host "Phiên bản v$v, đã phát hành: $exists, phát hành lần này: $release"
 
       - name: Cài thư viện
+        if: env.SKIP != 'True'
         run: python -m pip install -U pyinstaller ctranslate2 sentencepiece pypdf reportlab pillow faster-whisper opencc-python-reimplemented
 
       - name: Build exe 1 file và bản portable
+        if: env.SKIP != 'True'
         shell: pwsh
         run: |
           python build_ui.py
@@ -47,6 +60,7 @@ jobs:
           Get-ChildItem out/*.exe, out/*.zip | Format-Table Name, Length
 
       - name: Thử chạy bản exe
+        if: env.SKIP != 'True'
         shell: pwsh
         run: |
           $p = Start-Process -FilePath "out/DichViet.exe" -ArgumentList "--no-window" -PassThru
@@ -60,8 +74,8 @@ jobs:
           $r.libs | Format-List
           if (-not ($r.libs.faster_whisper -and $r.libs.av -and $r.libs.ctranslate2)) { throw "thiếu thư viện trong exe" }
 
-      - name: Lưu file build (chạy tay)
-        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+      - name: Lưu file build
+        if: env.SKIP != 'True' && env.RELEASE != 'True'
         uses: actions/upload-artifact@v4
         with:
           name: DichViet-windows
@@ -70,10 +84,10 @@ jobs:
             out/DichViet-Portable.zip
 
       - name: Đăng bản phát hành
-        if: startsWith(github.ref, 'refs/tags/')
+        if: env.RELEASE == 'True'
         env:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
         run: |
-          gh release create "${{ github.ref_name }}" out/DichViet.exe out/DichViet-Portable.zip `
-            --title "Dịch Việt ${{ github.ref_name }}" --notes-file RELEASE_NOTES.md
+          gh release create "$env:VER" out/DichViet.exe out/DichViet-Portable.zip `
+            --target "${{ github.sha }}" --title "Dịch Việt $env:VER" --notes-file RELEASE_NOTES.md
