@@ -7,6 +7,7 @@ Dịch phụ đề (SRT, ASS, VTT) và sách, truyện (EPUB, Word, PDF, TXT, MO
 - Dịch bằng GTX / Edge (miễn phí), Gemini, OpenAI, DeepSeek, Groq, OpenRouter, Ollama, LM Studio, HachimiMT (Trung → Việt, offline).
 - Giọng nói ra phụ đề: Whisper chạy trên máy (GPU NVIDIA / CPU), Groq Whisper, OpenAI Whisper.
 - Quét phụ đề in sẵn (hardsub) ra SRT bằng RapidOCR: Trung, Nhật, Anh, Hàn, Việt.
+- Xuất phụ đề nền đen (.ASS), che chữ in sẵn bằng dải đen; chuyển SRT có sẵn sang ASS nền đen.
 - Giữ timeline phụ đề, giữ chương và định dạng sách, lưu tiến độ để dịch tiếp, tự cập nhật từ GitHub.
 
 Hướng dẫn chi tiết: [HUONG_DAN.txt](HUONG_DAN.txt).

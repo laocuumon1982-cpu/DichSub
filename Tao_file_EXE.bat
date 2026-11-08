@@ -1,7 +1,7 @@
 @echo off
 chcp 65001 >nul
 cd /d "%~dp0"
-title Tao file exe - Dich Sub & Book v3.2 by Duy Anh
+title Tao file exe - Dich Sub & Book v3.3 by Duy Anh
 set "PY="
 where py >nul 2>nul && set "PY=py -3"
 if not defined PY where python >nul 2>nul && set "PY=python"

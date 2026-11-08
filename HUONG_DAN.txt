@@ -1,4 +1,4 @@
-DỊCH SUB & BOOK v3.2 BY DUY ANH — dịch phụ đề, sách, truyện sang tiếng Việt, tạo phụ đề từ video
+DỊCH SUB & BOOK v3.3 BY DUY ANH — dịch phụ đề, sách, truyện sang tiếng Việt, tạo phụ đề từ video
 =========================================================================
 
 CHẠY APP
@@ -70,6 +70,17 @@ QUÉT PHỤ ĐỀ TRONG VIDEO - OCR (biểu tượng khung quét trên thanh tr�
 5. Bấm vào một dòng trong danh sách để xem lại khung hình đúng lúc đó. Tick "Tự dịch sang tiếng Việt"
    hoặc bấm "Dịch sang tiếng Việt" để dịch luôn.
 Mẹo: chữ màu lạ (xanh, hồng) thì chọn "Màu nhạt khác". Quét mỗi 0,1 giây cho thời gian sát nhất.
+
+PHỤ ĐỀ NỀN ĐEN (mục Xuất file, biểu tượng mũi tên tải xuống trên thanh trái)
+- File SRT không chứa được màu nền. Tick "Nền đen dưới chữ (xuất file .ASS)": phụ đề dịch xong được lưu
+  thành file .ASS có hộp đen sau chữ (VLC, PotPlayer, MPC-HC, mpv, KMPlayer đều đọc được).
+  Hoặc bấm "Xuất" > "Tải ASS nền đen" cho từng tài liệu phụ đề.
+- Chọn cỡ chữ (Nhỏ, Vừa, Lớn) và độ đậm nền (Đen hẳn, Hơi trong, Trong). Khung "Xem trước" hiện ngay.
+- "Che chữ in sẵn": phụ đề lấy từ tab Quét phụ đề sẽ có dải đen phủ đúng chỗ chữ Trung in sẵn của
+  từng câu, bản dịch nằm giữa dải đó. Phụ đề khác thì chọn "che dải dưới khung hình" 15/20/25%.
+- Có sẵn file SRT? Bấm "Chuyển SRT có sẵn sang ASS nền đen" (hoặc kéo thả file vào nút đó):
+  chuyển ngay không cần dịch, file .ASS lưu cạnh file gốc. Chọn được nhiều file SRT, VTT, ASS.
+- Mở phim: để file .ASS cùng thư mục, cùng tên với phim (Phim.vi.ass), trình xem phim tự nhận.
 
 VĂN PHONG VÀ TỪ ĐIỂN (riêng cho từng tài liệu, biểu tượng cuốn sách trên thanh trái)
 - Văn phong: Tự nhiên hiện đại / Kiếm hiệp cổ trang / Ngôn tình / Sát nghĩa (áp dụng khi dịch bằng AI).

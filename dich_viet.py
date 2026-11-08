@@ -36,8 +36,8 @@ import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-APP_VERSION = "3.2.1"
-APP_NAME = "Dịch Sub & Book v3.2 by Duy Anh"
+APP_VERSION = "3.3.0"
+APP_NAME = "Dịch Sub & Book v3.3 by Duy Anh"
 GITHUB_REPO = "laocuumon1982-cpu/DichSub"     # nơi đăng bản mới (GitHub Releases)
 PORT = 47863
 HOME = os.path.expanduser("~")
@@ -622,6 +622,8 @@ def detect_lang(segs):
 def export_book(book, fmt, content, tgt):
     """Trả về (bytes, đuôi file). fmt: orig (giữ định dạng gốc) | epub | docx | pdf | txt."""
     if book.kind == "sub":
+        if fmt == "assbox":
+            return book_to_ass_boxed(book, content), ".ass"
         if fmt == "txt":
             text = "\n".join("\n".join(seg_out(s, content)) for s in book.segs if s.src.strip()) + "\n"
             return text.replace("\n", "\r\n").encode("utf-8-sig"), ".txt"
@@ -797,6 +799,158 @@ def build_sub(book, content):
     if book.mode == "vtt":
         out = ("\n".join(book.extra.get("header") or []).strip("\n") or "WEBVTT") + "\n\n" + out
     return out
+
+
+# ================================================================ phụ đề nền đen (ASS)
+# SRT không có màu nền -> xuất ASS kiểu "hộp đen" (BorderStyle=3). Phụ đề lấy từ tab Quét phụ đề còn có
+# dải đen che đúng chỗ chữ in sẵn trong phim (vị trí từng câu do OCR ghi lại).
+
+ASSBOX_DEFAULT = {"on": False, "size": "m", "alpha": "100", "cover": True, "band": "0", "font": "Arial"}
+ASS_TIME_RE = re.compile(r"(?:(\d+):)?(\d{1,2}):(\d{2})[,.](\d{1,3})")
+
+
+def assbox_style(style=None):
+    st = dict(ASSBOX_DEFAULT)
+    st.update((load_config().get("assbox") or {}) if style is None else style)
+    return st
+
+
+def _tsec(t):
+    m = ASS_TIME_RE.search(t or "")
+    if not m:
+        return None
+    h, mi, se, fr = m.groups()
+    return int(h or 0) * 3600 + int(mi) * 60 + int(se) + int(fr) / (10 ** len(fr))
+
+
+def sub_times(t):
+    parts = (t or "").split("-->")
+    if len(parts) != 2:
+        return None, None
+    return _tsec(parts[0]), _tsec(parts[1])
+
+
+def ass_time(t):
+    cs = int(round(max(0.0, t) * 100))
+    return "%d:%02d:%02d.%02d" % (cs // 360000, cs // 6000 % 60, cs // 100 % 60, cs % 100)
+
+
+def ass_text(t, src_ass=False):
+    t = (t or "").replace("\r", "")
+    if src_ass:
+        t = re.sub(r"\{[^}]*\}", "", t)          # bỏ định dạng cũ (vị trí, màu...) để chữ nằm trong hộp
+        t = t.replace("\\N", "\n").replace("\\n", "\n").replace("\\h", " ")
+    else:
+        for a, b in (("<i>", "{\\i1}"), ("</i>", "{\\i0}"), ("<b>", "{\\b1}"), ("</b>", "{\\b0}"),
+                     ("<u>", "{\\u1}"), ("</u>", "{\\u0}")):
+            t = re.sub(re.escape(a), lambda m, b=b: "\x00" + b[1:-1] + "\x01", t, flags=re.I)
+        t = re.sub(r"<[^>]+>", "", t)
+        t = t.replace("{", "(").replace("}", ")").replace("\x00", "{").replace("\x01", "}")
+    lines = [x.strip() for x in t.split("\n") if x.strip()]
+    return "\\N".join(lines)
+
+
+def build_ass_boxed(items, style=None, cover=None, title=""):
+    """items: [(bắt đầu, kết thúc, chữ, chỉ số câu)]; cover: {"w","h","boxes"} từ OCR (có thể None)."""
+    st = assbox_style(style)
+    W, H = (int(cover["w"]), int(cover["h"])) if cover and cover.get("w") else (1920, 1080)
+    size = {"s": 46, "m": 54, "l": 64}.get(st.get("size"), 54) * H / 1080
+    alpha = {"100": "00", "80": "33", "60": "66"}.get(str(st.get("alpha")), "00")
+    pad = max(2, round(size * 0.22))
+    mv = round(H * 0.045)
+    font = (st.get("font") or "Arial").replace(",", " ")
+    head = f"""[Script Info]
+; Dịch Sub & Book by Duy Anh - phụ đề nền đen
+Title: {title}
+ScriptType: v4.00+
+PlayResX: {W}
+PlayResY: {H}
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+YCbCr Matrix: None
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,{font},{round(size)},&H00FFFFFF,&H000000FF,&H{alpha}000000,&H{alpha}000000,0,0,0,0,100,100,0,0,3,{pad},0,2,{round(W * 0.05)},{round(W * 0.05)},{mv},1
+Style: Che,{font},20,&H00000000,&H00000000,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,7,0,0,0,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+"""
+    band = float(st.get("band") or 0) / 100.0
+    boxes = (cover or {}).get("boxes") or []
+    ev = []
+    for s, e, text, idx in items:
+        if s is None or e is None or not text:
+            continue
+        bb = boxes[idx] if st.get("cover", True) and idx is not None and idx < len(boxes) else None
+        if bb:
+            bw, bh = bb[2] - bb[0], bb[3] - bb[1]
+            x0, x1 = bb[0] - bw * 0.04 - W * 0.012, bb[2] + bw * 0.04 + W * 0.012
+            y0, y1 = bb[1] - bh * 0.28, bb[3] + bh * 0.28
+            # bản dịch dài hơn chữ gốc -> nới dải che cho vừa (ước lượng bề rộng chữ ~0.52 cỡ chữ)
+            lines = [re.sub(r"\{[^}]*\}", "", x) for x in text.split("\\N")]
+            need_w = max(len(x) for x in lines) * size * 0.52 + pad * 4
+            need_h = len(lines) * size * 1.25 + pad * 2
+            cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+            if x1 - x0 < need_w:
+                x0, x1 = cx - need_w / 2, cx + need_w / 2
+            if y1 - y0 < need_h:
+                y0, y1 = cy - need_h / 2, cy + need_h / 2
+            if y1 > H:
+                y0, y1 = y0 - (y1 - H), H
+            x0, x1, y0, y1 = max(0, x0), min(W, x1), max(0, y0), min(H, y1)
+        elif band > 0:
+            x0, x1, y0, y1 = 0, W, H * (1 - band), H
+        else:
+            x0 = None
+        if x0 is not None:
+            shape = f"m {x0:.0f} {y0:.0f} l {x1:.0f} {y0:.0f} l {x1:.0f} {y1:.0f} l {x0:.0f} {y1:.0f}"
+            ev.append(f"Dialogue: 0,{ass_time(s - 0.12)},{ass_time(e + 0.12)},Che,,0,0,0,,{{\\pos(0,0)\\p1}}{shape}{{\\p0}}")
+            pos = f"{{\\an5\\pos({(x0 + x1) / 2:.0f},{(y0 + y1) / 2:.0f})}}" if bb else ""
+        else:
+            pos = ""
+        ev.append(f"Dialogue: 1,{ass_time(s)},{ass_time(e)},Default,,0,0,0,,{pos}{text}")
+    return head + "\n".join(ev) + "\n"
+
+
+def book_to_ass_boxed(book, content="vi", style=None):
+    items = []
+    for k, sg in enumerate(book.segs):
+        if book.mode == "ass" and re.search(r"\{[^}]*\\p[1-9]", sg.src or ""):
+            continue                     # hình vẽ trong ASS gốc
+        s, e = sub_times(sg.time)
+        text = ass_text("\n".join(seg_out(sg, content)), src_ass=book.mode == "ass")
+        items.append((s, e, text, k))
+    return build_ass_boxed(items, style, book.extra.get("cover"), book.title).replace("\n", "\r\n").encode("utf-8-sig")
+
+
+def convert_sub_to_ass_boxed(text, name, style=None):
+    """SRT / VTT / ASS có sẵn -> ASS nền đen (không dịch)."""
+    book = parse_sub(text, name)
+    return book_to_ass_boxed(book, "vi", style)
+
+
+def read_text_file(data):
+    for enc in ("utf-8-sig", "utf-16", "gb18030", "cp1258", "cp1252"):
+        try:
+            t = data.decode(enc)
+            if enc == "utf-16" and not data[:2] in (b"\xff\xfe", b"\xfe\xff"):
+                continue
+            return t
+        except UnicodeDecodeError:
+            continue
+    return data.decode("utf-8", "replace")
+
+
+def free_name(path):
+    if not os.path.exists(path):
+        return path
+    base, ext = os.path.splitext(path)
+    k = 2
+    while os.path.exists(f"{base} ({k}){ext}"):
+        k += 1
+    return f"{base} ({k}){ext}"
 
 
 # ================================================================ Kindle: MOBI / PRC / AZW / AZW3
@@ -2751,7 +2905,7 @@ def srt_time(t):
 
 
 def cues_to_srt(cues):
-    return "".join(f"{i}\n{srt_time(s)} --> {srt_time(e)}\n{t}\n\n" for i, (s, e, t) in enumerate(cues, 1))
+    return "".join(f"{i}\n{srt_time(c[0])} --> {srt_time(c[1])}\n{c[2]}\n\n" for i, c in enumerate(cues, 1))
 
 
 def zh_converter(script):
@@ -3480,7 +3634,7 @@ def _cjk_char(c):
                 or "\uff00" <= c <= "\uffef") if c else False
 
 
-def ocr_image_text(eng, img_bgr, min_score=0.6, ref_h=0, heights=None):
+def ocr_image_text(eng, img_bgr, min_score=0.6, ref_h=0, heights=None, bbox=None):
     """Nhận chữ một ảnh -> (chuỗi nhiều dòng, điểm tin cậy trung bình).
     ref_h: chiều cao chữ phụ đề thường gặp trong phim này (bỏ chữ nhỏ hơn hẳn: nhiễu, logo)."""
     r = eng(img_bgr)
@@ -3493,7 +3647,8 @@ def ocr_image_text(eng, img_bgr, min_score=0.6, ref_h=0, heights=None):
             continue
         ys = [p[1] for p in box]
         xs = [p[0] for p in box]
-        items.append({"t": txt, "s": float(sc), "y": (min(ys) + max(ys)) / 2, "h": max(ys) - min(ys), "x": min(xs)})
+        items.append({"t": txt, "s": float(sc), "y": (min(ys) + max(ys)) / 2, "h": max(ys) - min(ys), "x": min(xs),
+                      "x1": max(xs), "y0": min(ys), "y1": max(ys)})
     if not items:
         return "", 0.0
     hmax = max(i["h"] for i in items)
@@ -3523,6 +3678,9 @@ def ocr_image_text(eng, img_bgr, min_score=0.6, ref_h=0, heights=None):
         out.append(fix_english_spaces(s))
     if len(out) > 1 and all(len(_norm_txt(x)) <= 1 for x in out):     # nhiều chữ lẻ rời rạc -> nhiễu nền
         return "", 0.0
+    if bbox is not None:        # khung bao chữ (toạ độ trong ảnh cắt) -> để che chữ in sẵn khi xuất ASS
+        bbox[:] = [float(min(i["x"] for i in items)), float(min(i["y0"] for i in items)),
+                   float(max(i["x1"] for i in items)), float(max(i["y1"] for i in items))]
     return "\n".join(out), sum(i["s"] for i in items) / len(items)
 
 
@@ -3540,6 +3698,18 @@ def _video_duration(c, vs):
     if vs.duration and vs.time_base:
         return float(vs.duration * vs.time_base)
     return 0.0
+
+
+def _video_size(path):
+    try:
+        c = _av_open(path)
+        try:
+            cc = c.streams.video[0].codec_context
+            return [cc.width, cc.height]
+        finally:
+            c.close()
+    except Exception:
+        return None
 
 
 def grab_frame(path, t):
@@ -3628,16 +3798,19 @@ def ocr_worker_main(port):
         nxt, last_pos = 0.0, 0.0
         cur = None          # đoạn chữ đang hiện: {"s", "sig", "n", "img"}
         box = None
+        frame_w = frame_h = 0
         heights = []        # chiều cao chữ phụ đề đã nhận chắc chắn -> lọc nhiễu nhỏ
 
         def close(end):
             if cur is None or cur["img"] is None:
                 return
             ref = sorted(heights[-40:])[len(heights[-40:]) // 2] if len(heights) >= 3 else 0
-            text, sc = ocr_image_text(eng, cur["img"], ref_h=ref, heights=heights)
+            bb = []
+            text, sc = ocr_image_text(eng, cur["img"], ref_h=ref, heights=heights, bbox=bb)
             if text:        # chữ hiện/tắt trong khoảng giữa 2 lần lấy mẫu -> lùi nửa bước cho sát
+                bx = [int(bb[0] + box[0]), int(bb[1] + box[1]), int(bb[2] + box[0]), int(bb[3] + box[1])] if bb else None
                 send({"ev": "seg", "s": max(0.0, cur["s"] - step / 2), "e": max(0.0, end - step / 2),
-                      "t": text, "sc": round(sc, 3)})
+                      "t": text, "sc": round(sc, 3), "bb": bx, "fw": frame_w, "fh": frame_h})
 
         import av as _av
         bad = tuple(x for x in (getattr(getattr(_av, "error", None), "InvalidDataError", None),) if x) or (ValueError,)
@@ -3655,6 +3828,7 @@ def ocr_worker_main(port):
             nxt = t + step
             y = _luma(fr)
             if box is None:
+                frame_h, frame_w = y.shape[0], y.shape[1]
                 box = crop_box(y.shape[1], y.shape[0], region)
             x0, y0, x1, y1 = box
             sig = text_mask(y[y0:y1, x0:x1], bright)[::3, ::3]
@@ -3729,10 +3903,12 @@ def make_ocr_cues(segs, conv=None, step=0.2):
             if (k == last["k"] and gap <= max(1.0, step * 4)) or (
                     gap <= step * 1.5 and difflib.SequenceMatcher(None, k, last["k"]).ratio() >= 0.85):
                 last["e"] = max(last["e"], sg["e"])
+                if sg.get("bb"):
+                    last["bb"] = _bb_union(last.get("bb"), sg["bb"])
                 if sg.get("sc", 0) > last["sc"]:
                     last.update(t=t, k=k, sc=sg.get("sc", 0))
                 continue
-        cues.append({"s": sg["s"], "e": sg["e"], "t": t, "k": k, "sc": sg.get("sc", 0)})
+        cues.append({"s": sg["s"], "e": sg["e"], "t": t, "k": k, "sc": sg.get("sc", 0), "bb": sg.get("bb")})
     out = []
     for c in cues:
         if c["e"] - c["s"] < step * 1.2 and c["sc"] < 0.85:     # chớp qua, nhận kém -> thường là nhiễu
@@ -3744,8 +3920,14 @@ def make_ocr_cues(segs, conv=None, step=0.2):
     for i, c in enumerate(out):
         nxt = out[i + 1]["s"] if i + 1 < len(out) else c["e"] + 5
         end = min(max(c["e"], c["s"] + 0.5), nxt - 0.02)
-        res.append([round(c["s"], 3), round(max(end, c["s"] + 0.2), 3), c["t"]])
+        res.append([round(c["s"], 3), round(max(end, c["s"] + 0.2), 3), c["t"], c.get("bb")])
     return res
+
+
+def _bb_union(a, b):
+    if not a:
+        return list(b)
+    return [min(a[0], b[0]), min(a[1], b[1]), max(a[2], b[2]), max(a[3], b[3])]
 
 
 class OcrState(SttState):
@@ -3759,6 +3941,17 @@ class OcrState(SttState):
     def worker_cmd(self, port):
         return ocr_worker_cmd(port)
 
+    def to_library(self, j, tcfg, out_dir=None):
+        new = not (j.lib_id and j.lib_id in STATE.jobs)
+        job = SttState.to_library(self, j, tcfg, out_dir)
+        if new or not job.book.extra.get("cover"):
+            frame = getattr(j, "frame", None) or _video_size(j.path)
+            if frame and any(len(c) > 3 and c[3] for c in j.cues):
+                job.book.extra["cover"] = {"w": frame[0], "h": frame[1], "boxes": [c[3] if len(c) > 3 else None
+                                                                                for c in j.cues]}
+                job.save_meta()
+        return job
+
     def free_path(self, folder, fname):
         p = os.path.join(folder, fname)
         if os.path.exists(p):           # không ghi đè phụ đề sẵn có (vd. do tab Giọng nói tạo)
@@ -3768,6 +3961,8 @@ class OcrState(SttState):
     def _event(self, j, ev, lang_opt, size, conv):
         k = ev.get("ev")
         if k == "seg":
+            if ev.get("fw"):
+                j.frame = [ev["fw"], ev["fh"]]
             with self.lock:
                 j.segments.append(ev)
                 j.pos = max(j.pos, float(ev.get("e") or 0))
@@ -4086,8 +4281,8 @@ class Job:
         try:
             os.makedirs(self.dir, exist_ok=True)
             with open(os.path.join(self.dir, "meta.json"), "w", encoding="utf-8") as f:
-                json.dump({"name": self.name, "added": self.added, "settings": self.settings, "outDir": self.out_dir},
-                          f, ensure_ascii=False, indent=1)
+                json.dump({"name": self.name, "added": self.added, "settings": self.settings, "outDir": self.out_dir,
+                           "cover": self.book.extra.get("cover")}, f, ensure_ascii=False, indent=1)
         except Exception as e:
             log_file(f"Không lưu được thông tin {self.name}: {e}")
 
@@ -4132,6 +4327,8 @@ class State:
                 job._chars = sum(len(s.src) for s in book.segs)
                 job.added = meta.get("added", 0)
                 job.out_dir = meta.get("outDir") or ""
+                if meta.get("cover"):
+                    job.book.extra["cover"] = meta["cover"]
                 p = os.path.join(d, "progress.json")
                 if os.path.isfile(p):
                     with open(p, encoding="utf-8") as f:
@@ -4297,8 +4494,10 @@ class State:
         done, _ = job.counts()
         if cfg.get("autosave", True) and done and job.status in ("done", "partial", "stopped"):
             try:
-                job.saved = save_export(job, job.out_dir or cfg.get("outDir"), cfg.get("format", "orig"),
-                                        cfg.get("content", "vi"), tgt)
+                fmt = cfg.get("format", "orig")
+                if job.book.kind == "sub" and assbox_style().get("on"):
+                    fmt = "assbox"
+                job.saved = save_export(job, job.out_dir or cfg.get("outDir"), fmt, cfg.get("content", "vi"), tgt)
                 self.log(f"Đã lưu: {job.saved}", job)
             except Exception as e:
                 self.log(f"Không tự lưu được: {e}", job)
@@ -4740,6 +4939,28 @@ class Handler(BaseHTTPRequestHandler):
                     if svc == "ollama" and ("10061" in msg or "refused" in msg.lower()):
                         msg = "Ollama chưa chạy. Cài tại ollama.com rồi mở Ollama từ Start Menu."
                     return self._send(200, {"models": [], "error": msg})
+            if u.path == "/api/assbox/convert":
+                data = convert_sub_to_ass_boxed(d.get("text", ""), d.get("name", "sub.srt"), d.get("style"))
+                name = os.path.splitext(os.path.basename(d.get("name") or "phude"))[0] + ".ass"
+                return self._send(200, {"name": name, "text": data.decode("utf-8-sig")})
+            if u.path == "/api/assbox/pick":
+                try:
+                    paths = pick_files_dialog({".srt", ".vtt", ".ass", ".ssa"}, "Chọn file phụ đề để chuyển sang ASS nền đen")
+                except RuntimeError:
+                    return self._send(200, {"noDialog": True})
+                done, errors = [], []
+                for p_ in paths:
+                    try:
+                        with open(p_, "rb") as f:
+                            text = read_text_file(f.read())
+                        out = os.path.splitext(p_)[0] + (".nen-den.ass" if p_.lower().endswith((".ass", ".ssa")) else ".ass")
+                        out = free_name(out)
+                        with open(out, "wb") as f:
+                            f.write(convert_sub_to_ass_boxed(text, p_, d.get("style")))
+                        done.append(out)
+                    except Exception as e:
+                        errors.append(f"{os.path.basename(p_)}: {e}")
+                return self._send(200, {"done": done, "errors": errors})
             if u.path == "/api/quit":
                 if app_busy():
                     return self._send(200, {"ok": False, "busy": True})
