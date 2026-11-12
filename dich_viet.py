@@ -36,7 +36,7 @@ import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-APP_VERSION = "3.3.0"
+APP_VERSION = "3.3.1"
 APP_NAME = "Dịch Sub & Book v3.3 by Duy Anh"
 GITHUB_REPO = "laocuumon1982-cpu/DichSub"     # nơi đăng bản mới (GitHub Releases)
 PORT = 47863

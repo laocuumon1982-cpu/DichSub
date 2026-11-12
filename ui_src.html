@@ -58,6 +58,19 @@ svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 #updBtn .dotu{position:absolute;top:3px;right:3px;width:8px;height:8px;border-radius:50%;background:var(--err)}
 #updBtn.new{color:var(--err);font-weight:600}
 .overlay{position:fixed;inset:0;z-index:50;background:rgba(8,12,20,.55);display:grid;place-items:center}
+.dlg{background:var(--surface);color:var(--text);border-radius:14px;width:min(720px,calc(100vw - 32px));max-height:calc(100vh - 40px);
+  overflow:auto;box-shadow:0 24px 60px rgba(0,0,0,.35);text-align:left}
+.dlg-h{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--line)}
+.dlg-h b{font:600 17px/1.3 var(--head);flex:1}
+.dlg-b{padding:16px 20px 20px}
+.dlg-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:14px;align-items:start}
+.dlg-grid .boxprev{margin-top:26px;height:150px}
+.dlg-res{margin-top:14px;display:flex;flex-direction:column;gap:6px}
+.dlg-res .it{display:flex;gap:8px;align-items:center;font-size:12.5px;padding:7px 10px;border-radius:8px;background:var(--hover)}
+.dlg-res .it .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dlg-res .it.err{color:var(--err)}
+#assDrop{padding:26px 16px}
+@media (max-width:640px){.dlg-grid{grid-template-columns:1fr}}
 .overlay .box{background:var(--surface);border-radius:12px;padding:26px 30px;max-width:420px;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.3)}
 .overlay .box b{display:block;font:600 17px/1.3 var(--head);margin-bottom:6px}
 .overlay .box span{color:var(--muted);font-size:13px}
@@ -345,6 +358,7 @@ textarea{resize:vertical;min-height:70px;line-height:1.45}
   <div class="top">
     <div class="brand">%%LOGO%%<b>Dịch Sub &amp; Book</b><em>by Duy Anh</em><span class="ver">v3.3</span></div>
     <div class="spacer"></div>
+    <button class="btn sm" id="assTop" title="Chuyển file SRT, VTT, ASS có sẵn sang ASS nền đen (không cần dịch)"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M6 14h12v3H6z" style="fill:currentColor"/></svg>SRT → ASS nền đen</button>
     <button class="btn ghost sm" id="updBtn" title="Kiểm tra bản mới trên GitHub"><svg class="i" viewBox="0 0 24 24"><path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14"/></svg><span id="updTxt">Cập nhật</span><span class="dotu" id="updDot" hidden></span></button>
     <button class="btn ghost sm" id="refreshTop" title="Tải lại danh sách và tài liệu đang mở"><svg class="i" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/></svg>Làm mới</button>
     <div class="lang"><span>Dịch từ</span><select id="srcLang" aria-label="Ngôn ngữ gốc"></select><span>sang</span><select id="tgtLang" aria-label="Ngôn ngữ đích"></select></div>
@@ -432,14 +446,14 @@ textarea{resize:vertical;min-height:70px;line-height:1.45}
           <div class="sec"><h3>Phụ đề nền đen</h3>
             <label class="check" style="margin-top:0"><input type="checkbox" id="boxOn"> Nền đen dưới chữ (xuất file .ASS)</label>
             <div class="hint">File SRT không chứa được màu nền, nên phụ đề sẽ xuất ra file .ASS có hộp đen sau chữ. VLC, PotPlayer, MPC-HC, mpv, KMPlayer đều đọc được.</div>
-            <label class="f">Cỡ chữ</label><div class="seg" id="boxSize"><button data-v="s">Nhỏ</button><button data-v="m">Vừa</button><button data-v="l">Lớn</button></div>
-            <label class="f">Nền đen</label><div class="seg" id="boxAlpha"><button data-v="100">Đen hẳn</button><button data-v="80">Hơi trong</button><button data-v="60">Trong</button></div>
+            <label class="f">Cỡ chữ</label><div class="seg" id="boxSize" data-box="size"><button data-v="s">Nhỏ</button><button data-v="m">Vừa</button><button data-v="l">Lớn</button></div>
+            <label class="f">Nền đen</label><div class="seg" id="boxAlpha" data-box="alpha"><button data-v="100">Đen hẳn</button><button data-v="80">Hơi trong</button><button data-v="60">Trong</button></div>
             <label class="check"><input type="checkbox" id="boxCover"> Che chữ in sẵn (phụ đề lấy từ tab Quét phụ đề)</label>
             <div class="hint">App nhớ vị trí từng câu chữ Trung in sẵn khi quét, phủ dải đen vừa khít lên đó rồi đặt bản dịch vào giữa.</div>
-            <label class="f">Phụ đề khác: che dải dưới khung hình</label><div class="seg" id="boxBand"><button data-v="0">Không</button><button data-v="15">15%</button><button data-v="20">20%</button><button data-v="25">25%</button></div>
-            <div class="boxprev" id="boxPrev" aria-hidden="true"><span class="bp-tag">Xem trước</span><div class="burn"><span id="bpBurn">他说我们应该在暴风雨之前离开</span></div><div class="band" id="bpBand"></div><div class="cov" id="bpCov"></div><div class="txt" id="bpTxt">Chúng ta nên rời đi ngay</div></div>
-            <button class="btn dropbtn" id="boxConvert" style="margin-top:12px;width:100%;justify-content:center"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h7M17 14l3 3-3 3M14 17h6"/></svg>Chuyển SRT có sẵn sang ASS nền đen</button>
-            <div class="hint">Chọn hoặc kéo thả vào nút này một hay nhiều file SRT, VTT, ASS. Không cần dịch, file .ASS lưu ngay cạnh file gốc.</div>
+            <label class="f">Phụ đề khác: che dải dưới khung hình</label><div class="seg" id="boxBand" data-box="band"><button data-v="0">Không</button><button data-v="15">15%</button><button data-v="20">20%</button><button data-v="25">25%</button></div>
+            <div class="boxprev" id="boxPrev" aria-hidden="true"><span class="bp-tag">Xem trước</span><div class="burn"><span class="bp-burn">他说我们应该在暴风雨之前离开</span></div><div class="band"></div><div class="cov"></div><div class="txt">Chúng ta nên rời đi ngay</div></div>
+            <button class="btn dropbtn" id="boxConvert" style="margin-top:12px;width:100%;justify-content:center"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h7M17 14l3 3-3 3M14 17h6"/></svg>Chuyển SRT có sẵn sang ASS nền đen…</button>
+            <div class="hint">Mở công cụ chuyển file có sẵn (cũng có nút "SRT → ASS nền đen" trên thanh trên cùng).</div>
           </div>
           <div class="sec"><h3>Lưu tự động</h3>
             <label class="check" style="margin-top:0"><input type="checkbox" id="autosave"> Tự lưu khi dịch xong vào thư mục</label>
@@ -463,7 +477,8 @@ textarea{resize:vertical;min-height:70px;line-height:1.45}
             <b>Kéo thả file vào đây</b><span style="color:var(--muted)">hoặc bấm để chọn, chọn được nhiều file một lúc</span>
             <div class="fmts"><span class="s">SRT</span><span class="s">ASS</span><span class="s">VTT</span><span class="b">EPUB</span><span class="b">DOC</span><span class="b">DOCX</span><span class="b">RTF</span><span class="b">ODT</span><span class="b">PDF</span><span class="b">TXT</span><span class="b">MOBI</span><span class="b">PRC</span><span class="b">AZW3</span><span class="b">MD</span><span class="b">HTML</span></div>
           </div>
-          <div class="alt"><button class="btn" id="goStt"><svg class="i" viewBox="0 0 24 24"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3M8 21h8"/></svg>Chưa có phụ đề? Tạo phụ đề từ video, âm thanh</button></div>
+          <div class="alt"><button class="btn" id="goStt"><svg class="i" viewBox="0 0 24 24"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3M8 21h8"/></svg>Chưa có phụ đề? Tạo phụ đề từ video, âm thanh</button>
+            <button class="btn" id="goAss" style="margin-left:8px"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M6 14h12v3H6z" style="fill:currentColor"/></svg>Chuyển SRT có sẵn sang ASS nền đen</button></div>
         </div>
       </div>
 
@@ -596,6 +611,27 @@ textarea{resize:vertical;min-height:70px;line-height:1.45}
 <input type="file" id="fileIn" multiple hidden accept=".srt,.ass,.ssa,.vtt,.epub,.docx,.doc,.docm,.dot,.dotx,.dotm,.rtf,.odt,.wps,.txt,.pdf,.md,.markdown,.html,.htm,.mobi,.prc,.azw,.azw3">
 <div class="lost" id="lost" hidden>Mất kết nối với app (app đã bị tắt). Hãy đóng cửa sổ này và mở lại app.</div>
 <div class="toasts" id="toasts"></div>
+<div class="overlay" id="assDlg" hidden>
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="assDlgT">
+    <div class="dlg-h"><b id="assDlgT">Chuyển phụ đề có sẵn sang ASS nền đen</b><button class="btn ghost sm" id="assClose" aria-label="Đóng">Đóng</button></div>
+    <div class="dlg-b">
+      <div class="bigdrop" id="assDrop" tabindex="0" role="button">
+        <b>Kéo thả file phụ đề vào đây</b><span style="color:var(--muted)">hoặc bấm để chọn, chọn được nhiều file một lúc. Không cần dịch.</span>
+        <div class="fmts"><span class="s">SRT</span><span class="s">VTT</span><span class="s">ASS</span><span class="s">SSA</span></div>
+      </div>
+      <div class="dlg-grid">
+        <div>
+          <label class="f">Cỡ chữ</label><div class="seg" data-box="size"><button data-v="s">Nhỏ</button><button data-v="m">Vừa</button><button data-v="l">Lớn</button></div>
+          <label class="f">Nền đen</label><div class="seg" data-box="alpha"><button data-v="100">Đen hẳn</button><button data-v="80">Hơi trong</button><button data-v="60">Trong</button></div>
+          <label class="f">Che dải chữ in sẵn dưới khung hình</label><div class="seg" data-box="band"><button data-v="0">Không</button><button data-v="15">15%</button><button data-v="20">20%</button><button data-v="25">25%</button></div>
+        </div>
+        <div class="boxprev" data-mode="band" aria-hidden="true"><span class="bp-tag">Xem trước</span><div class="burn"><span class="bp-burn">他说我们应该在暴风雨之前离开</span></div><div class="band"></div><div class="cov"></div><div class="txt">Chúng ta nên rời đi ngay</div></div>
+      </div>
+      <div class="dlg-res" id="assRes"></div>
+      <div class="hint">File .ass lưu cạnh file gốc (ví dụ Phim.srt thành Phim.ass). Để cùng thư mục, cùng tên với phim thì VLC, PotPlayer, MPC-HC, mpv tự nhận.</div>
+    </div>
+  </div>
+</div>
 <div class="overlay" id="updOverlay" hidden><div class="box"><b id="updOvT">Đang khởi động lại…</b><span id="updOvS">App đang cài bản mới, cửa sổ sẽ tự tải lại.</span></div></div>
 
 <script>
@@ -792,15 +828,20 @@ function boxCfg(){
 function renderBox(){
   const b = boxCfg();
   $("#boxOn").checked = b.on; $("#boxCover").checked = b.cover;
-  for(const [id, key] of [["#boxSize","size"],["#boxAlpha","alpha"],["#boxBand","band"]]){
-    $$(id + " button").forEach(x => x.classList.toggle("on", x.dataset.v === String(b[key])));
-    $(id).onclick = ev => { const x = ev.target.closest("button"); if(!x) return; b[key] = x.dataset.v; saveCfg(); renderBox(); };
-  }
+  $$("[data-box]").forEach(seg => {
+    const key = seg.dataset.box;
+    [...seg.querySelectorAll("button")].forEach(x => x.classList.toggle("on", x.dataset.v === String(b[key])));
+    seg.onclick = ev => { const x = ev.target.closest("button"); if(!x) return; b[key] = x.dataset.v; saveCfg(); renderBox(); };
+  });
   const fs = {s:10.5, m:12, l:14}[b.size], op = Number(b.alpha) / 100;
-  $("#bpTxt").style.fontSize = fs + "px"; $("#bpTxt").style.background = `rgba(0,0,0,${op})`;
-  $("#bpCov").style.display = b.cover ? "" : "none";
-  const t = $("#bpTxt"); $("#bpCov").style.width = (Math.max(t.offsetWidth, $("#bpBurn").offsetWidth) + 14) + "px";
-  $("#bpBand").style.height = b.cover ? "0" : (Number(b.band) * 1.12) + "px";
+  $$(".boxprev").forEach(pv => {
+    const cover = pv.dataset.mode !== "band" && b.cover, t = pv.querySelector(".txt"), H = pv.clientHeight || 112;
+    const k = H / 112;
+    t.style.fontSize = (fs * k) + "px"; t.style.background = `rgba(0,0,0,${op})`;
+    pv.querySelector(".cov").style.display = cover ? "" : "none";
+    pv.querySelector(".cov").style.width = (Math.max(t.offsetWidth, pv.querySelector(".bp-burn").offsetWidth) + 14) + "px";
+    pv.querySelector(".band").style.height = cover ? "0" : (Number(b.band) / 100 * H) + "px";
+  });
 }
 $("#boxOn").onchange = e => { boxCfg().on = e.target.checked; saveCfg(); renderBox(); };
 $("#boxCover").onchange = e => { boxCfg().cover = e.target.checked; saveCfg(); renderBox(); };
@@ -813,23 +854,41 @@ async function convertFiles(files){
       const d = await api("/api/assbox/convert", {name:f.name, text, style:boxCfg()});
       const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["\ufeff" + d.text.replace(/\r?\n/g, "\r\n")], {type:"text/plain"}));
       a.download = d.name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
-    }catch(e){ toast(`${f.name}: ${e.message}`, "err"); }
+      assRes([{name: d.name + " (thư mục Downloads)"}]);
+    }catch(e){ toast(`${f.name}: ${e.message}`, "err"); assRes([{name:f.name, err:e.message}]); }
   }
   toast(`Đã chuyển ${subs.length} file sang ASS nền đen (tải về thư mục Downloads).`, "ok");
 }
-$("#boxConvert").onclick = async () => {
+function assRes(items){
+  const box = $("#assRes");
+  box.innerHTML = items.map(it => `<div class="it ${it.err ? "err" : ""}"><span class="nm" title="${esc(it.path || it.name)}">${it.err ? "Lỗi: " : "Đã tạo: "}${esc(it.path || it.name)}${it.err ? " — " + esc(it.err) : ""}</span>${it.path && !it.err ? `<button class="btn sm ghost" data-open="${esc(it.path)}">Mở thư mục</button>` : ""}</div>`).join("") + box.innerHTML;
+  [...box.querySelectorAll("[data-open]")].forEach(b => b.onclick = () => api("/api/open_folder", {path:b.dataset.open}).catch(e => toast(e.message, "err")));
+}
+async function assPick(){
   try{
     const d = await api("/api/assbox/pick", {style:boxCfg()});
     if(d.noDialog) return $("#subIn").click();
-    d.errors.forEach(x => toast(x, "err"));
-    if(d.done.length) toast(`Đã tạo ${d.done.length} file ASS nền đen cạnh file gốc:\n` + d.done.slice(0, 4).join("\n"), "ok");
+    assRes([...d.done.map(p => ({path:p})), ...d.errors.map(e => ({name:e.split(":")[0], err:e.split(":").slice(1).join(":").trim()}))]);
+    if(d.done.length) toast(`Đã tạo ${d.done.length} file ASS nền đen cạnh file gốc.`, "ok");
   }catch(e){ $("#subIn").click(); }
-};
+}
+function openAss(){ $("#assDlg").hidden = false; renderBox(); requestAnimationFrame(renderBox); setTimeout(() => $("#assDrop").focus(), 50); }
+function closeAss(){ $("#assDlg").hidden = true; }
+$("#assTop").onclick = openAss; $("#goAss").onclick = openAss; $("#boxConvert").onclick = openAss;
+$("#assClose").onclick = closeAss;
+$("#assDlg").addEventListener("mousedown", e => { if(e.target === $("#assDlg")) closeAss(); });
+document.addEventListener("keydown", e => { if(e.key === "Escape" && !$("#assDlg").hidden) closeAss(); });
+$("#assDrop").onclick = assPick;
+$("#assDrop").onkeydown = e => { if(e.key === "Enter" || e.key === " "){ e.preventDefault(); assPick(); } };
+{ const ov = $("#assDlg"), dz = $("#assDrop");
+  ov.addEventListener("dragover", e => { e.preventDefault(); e.stopPropagation(); dz.classList.add("over"); });
+  ov.addEventListener("dragleave", e => { if(!ov.contains(e.relatedTarget)) dz.classList.remove("over"); });
+  ov.addEventListener("drop", e => { e.preventDefault(); e.stopPropagation(); dz.classList.remove("over"); convertFiles([...(e.dataTransfer?.files || [])]); }); }
 $("#subIn").onchange = () => { convertFiles([...$("#subIn").files]); $("#subIn").value = ""; };
 { const el = $("#boxConvert");
   el.addEventListener("dragover", e => { e.preventDefault(); e.stopPropagation(); el.classList.add("over"); });
   el.addEventListener("dragleave", () => el.classList.remove("over"));
-  el.addEventListener("drop", e => { e.preventDefault(); e.stopPropagation(); el.classList.remove("over"); convertFiles([...(e.dataTransfer?.files || [])]); }); }
+  el.addEventListener("drop", e => { e.preventDefault(); e.stopPropagation(); el.classList.remove("over"); openAss(); convertFiles([...(e.dataTransfer?.files || [])]); }); }
 $("#outDir").oninput = e => { cfg.outDir = e.target.value.trim(); saveCfg(); };
 $("#openOut").onclick = () => api("/api/open_folder", {path:cfg.outDir}).catch(e => toast(e.message, "err"));
 

@@ -3,7 +3,11 @@
 - **DichSub.exe**: bản 1 file, bấm đúp là chạy.
 - **DichSub-Portable.zip**: bản portable, giải nén rồi mở `DichSub.exe` bên trong. Mọi dữ liệu nằm trong thư mục `data`, chép sang USB hay máy khác là dùng tiếp.
 
-Đang dùng bản 3.1 trở lên: bấm nút "Có bản 3.3.0" ở góc trên app để tự cập nhật, giữ nguyên dữ liệu.
+Đang dùng bản 3.1 trở lên: bấm nút "Có bản 3.3.1" ở góc trên app để tự cập nhật, giữ nguyên dữ liệu.
+
+## Có gì mới trong 3.3.1
+
+- Nút riêng **"SRT → ASS nền đen"** trên thanh trên cùng (và trên màn hình chào): mở cửa sổ kéo thả file SRT, VTT, ASS, chọn cỡ chữ, độ đậm nền, dải che, xem trước, chuyển ngay không cần dịch.
 
 ## Có gì mới trong 3.3.0
 
