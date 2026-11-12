@@ -69,13 +69,25 @@ jobs:
             Start-Sleep 2
             try { $r = Invoke-RestMethod http://127.0.0.1:47863/api/stt/info; $ok = $true; break } catch {}
           }
-          if ($ok) { $o = Invoke-RestMethod http://127.0.0.1:47863/api/ocr/info }
+          if ($ok) {
+            $o = Invoke-RestMethod http://127.0.0.1:47863/api/ocr/info
+            # HachimiMT: tiến trình phụ phải nạp được ctranslate2 + sentencepiece (bắt lỗi thiếu DLL)
+            $h = $null
+            for ($i = 0; $i -lt 45; $i++) {
+              $h = Invoke-RestMethod http://127.0.0.1:47863/api/hachimi
+              if ($h.probe.state -eq "done") { break }
+              Start-Sleep 2
+            }
+            Write-Host "HachimiMT probe: state=$($h.probe.state) cuda=$($h.probe.cuda) err=$($h.probe.err)"
+          }
           Stop-Process -Id $p.Id -Force
           if (-not $ok) { throw "exe không chạy được" }
           $r.libs | Format-List
           $o.libs | Format-List
           if (-not ($r.libs.faster_whisper -and $r.libs.av -and $r.libs.ctranslate2)) { throw "thiếu thư viện Whisper trong exe" }
           if (-not ($o.libs.rapidocr -and $o.libs.cv2 -and $o.libs.onnxruntime)) { throw "thiếu thư viện quét chữ trong exe" }
+          if ($h.probe.state -ne "done") { throw "HachimiMT không khởi động được trong exe" }
+          if ($h.probe.err -match "ImportError|DLL load|No module") { throw "HachimiMT lỗi thư viện trong exe: $($h.probe.err)" }
 
       - name: Lưu file build
         if: env.SKIP != 'True' && env.RELEASE != 'True'

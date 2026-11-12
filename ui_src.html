@@ -942,6 +942,8 @@ function renderHachimi(){
   if(!d.haveLibs){ chip = `<span class="warn-chip">Chưa kiểm tra</span>`; info = `<small>Cần cài thư viện trước.</small>`; }
   else if(checking){ chip = `<span class="warn-chip">Đang kiểm tra…</span>`; info = `<small>${g ? esc(g.name) : "Đang dò card đồ họa"}, mất vài giây.</small>`; }
   else if(d.cudaDevices > 0){ chip = `<span class="ok-chip">GPU sẵn sàng</span>`; info = `<small>${g ? `${esc(g.name)}, ${Math.round(g.vram/1024)} GB VRAM` : "GPU NVIDIA"}</small>`; }
+  else if(pr.err && /ImportError|DLL load failed|No module/i.test(pr.err)){ chip = `<span class="warn-chip">Lỗi thư viện</span>`;
+    info = `<small>Thư viện chạy model trong app bị lỗi (không phải lỗi card đồ họa). Hãy cập nhật app lên bản mới nhất.</small><small style="color:var(--err)">${esc(pr.err)}</small>`; }
   else if(!g){ chip = `<span class="warn-chip">Dùng CPU</span>`; info = `<small>Không thấy card NVIDIA. HachimiMT dịch bằng CPU (vẫn khá nhanh).</small>`; }
   else{ chip = `<span class="warn-chip">Chưa dùng được GPU</span>`;
     info = `<small>${esc(g.name)}, ${Math.round(g.vram/1024)} GB VRAM. ${d.cudaFiles ? "Đã có thư viện CUDA nhưng chưa nhận GPU: cập nhật driver NVIDIA rồi bấm Kiểm tra lại." : "Cần thư viện CUDA 12 (khoảng 600 MB, lưu riêng trong thư mục app)."}</small>`;

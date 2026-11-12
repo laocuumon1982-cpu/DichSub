@@ -36,7 +36,7 @@ import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-APP_VERSION = "3.3.1"
+APP_VERSION = "3.3.2"
 APP_NAME = "Dịch Sub & Book v3.3 by Duy Anh"
 GITHUB_REPO = "laocuumon1982-cpu/DichSub"     # nơi đăng bản mới (GitHub Releases)
 PORT = 47863
@@ -2013,6 +2013,23 @@ def libs_status():
     import importlib.util
     importlib.invalidate_caches()
     return {m: bool(importlib.util.find_spec(m)) for m in ("ctranslate2", "sentencepiece")}
+
+
+def add_bundled_dll_dirs():
+    """Bản exe: thêm mọi thư mục DLL đi kèm (<gói>.libs) vào đường tìm DLL.
+    PyInstaller gộp DLL trùng tên giữa các gói (vd. msvcp140 của sentencepiece nằm trong numpy.libs),
+    nên sentencepiece/ctranslate2 chỉ tìm thư mục của chính nó sẽ báo "DLL load failed"."""
+    base = getattr(sys, "_MEIPASS", None)
+    if not base or not hasattr(os, "add_dll_directory"):
+        return
+    dirs = [base] + [os.path.join(base, d) for d in sorted(os.listdir(base))
+                     if d.lower().endswith(".libs") and os.path.isdir(os.path.join(base, d))]
+    for d in dirs:
+        try:
+            os.add_dll_directory(d)
+        except OSError:
+            pass
+    os.environ["PATH"] = os.pathsep.join(dirs) + os.pathsep + os.environ.get("PATH", "")
 
 
 def setup_cuda_path():
@@ -5146,6 +5163,7 @@ def app_busy():
 
 def main():
     global STATE, STT, OCRS
+    add_bundled_dll_dirs()
     if "--ocr-worker" in sys.argv:
         ocr_worker_main(int(sys.argv[sys.argv.index("--ocr-worker") + 1]))
         return

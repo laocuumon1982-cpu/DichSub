@@ -3,7 +3,11 @@
 - **DichSub.exe**: bản 1 file, bấm đúp là chạy.
 - **DichSub-Portable.zip**: bản portable, giải nén rồi mở `DichSub.exe` bên trong. Mọi dữ liệu nằm trong thư mục `data`, chép sang USB hay máy khác là dùng tiếp.
 
-Đang dùng bản 3.1 trở lên: bấm nút "Có bản 3.3.1" ở góc trên app để tự cập nhật, giữ nguyên dữ liệu.
+Đang dùng bản 3.1 trở lên: bấm nút "Có bản 3.3.2" ở góc trên app để tự cập nhật, giữ nguyên dữ liệu.
+
+## Có gì mới trong 3.3.2
+
+- Sửa lỗi HachimiMT báo "Chưa dùng được GPU" kèm `ImportError: DLL load failed while importing _sentencepiece`: bản exe để một DLL của sentencepiece sang thư mục khác khi đóng gói, nay app tự tìm đúng chỗ. Lỗi thư viện cũng không còn bị báo nhầm thành lỗi GPU.
 
 ## Có gì mới trong 3.3.1
 
