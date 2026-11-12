@@ -8,4 +8,4 @@ fav = "data:image/svg+xml;base64," + base64.b64encode(open(os.path.join(D, "logo
 logo = open(os.path.join(D, "logo.svg"), encoding="utf-8").read()
 logo = logo[logo.index("<svg"):]
 open(os.path.join(D, "ui.html"), "w", encoding="utf-8").write(s.replace("%%FAV%%", fav).replace("%%LOGO%%", logo))
-print("Đã tạo ui.html")
+print("ui.html built")
