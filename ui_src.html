@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Dịch Sub & Book v3.3 by Duy Anh</title>
+<title>Dịch Sub & Book v4.0 Agent Editor by Duy Anh</title>
 <link rel="icon" href="%%FAV%%">
 <style>
 :root{
@@ -225,7 +225,10 @@ textarea{resize:vertical;min-height:70px;line-height:1.45}
 .etool{display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--line);background:var(--surface)}
 .etool .seg button{padding:4px 10px}
 .etool .chname{font:600 13.5px var(--head);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1;letter-spacing:.2px}
-.etool input[type=text]{width:170px;padding:4px 8px}
+.etool input[type=text]{width:130px;padding:4px 8px}
+.etool .chname{min-width:70px}
+.etool .check{white-space:nowrap}
+.etool{flex-wrap:wrap;row-gap:6px}
 .screen{flex:none;background:radial-gradient(120% 140% at 50% 0%,var(--screen-2),var(--screen));height:112px;position:relative;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;padding:10px 24px 14px;overflow:hidden}
 .screen .tc{position:absolute;top:9px;left:14px;font:500 11.5px var(--head);color:#7D879A;letter-spacing:.4px}
 .screen .src{color:#B9C1CE;font-size:12.5px;text-align:center;max-width:90%;white-space:pre-line;margin-bottom:5px}
@@ -351,12 +354,83 @@ textarea{resize:vertical;min-height:70px;line-height:1.45}
   .mid,.mid.nopanel{grid-template-columns:52px 1fr}.panel{grid-column:2}.work{grid-column:1/-1}
   .body,.stt-body{grid-template-columns:1fr}.outline,.stt-list{max-height:220px}.dochead{flex-wrap:wrap}.top .lang{display:none}
 }
+/* ---------- Agent Editor */
+.agent-hero{border-radius:12px;padding:14px 14px 12px;background:linear-gradient(135deg,var(--rail) 0%,#2B3B66 100%);color:#fff;margin-bottom:4px}
+.agent-hero .row{justify-content:space-between}
+.agent-hero b{font:600 16px/1.2 var(--head);letter-spacing:.3px;display:flex;align-items:center;gap:8px}
+.agent-hero b svg.i{width:18px;height:18px;color:var(--amber)}
+.agent-hero p{margin:8px 0 0;font-size:12.5px;line-height:1.45;color:#C9D3E8}
+.agent-hero .warn{margin-top:10px;background:rgba(242,194,48,.16);border:1px solid rgba(242,194,48,.45);color:#FFE7A3;border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.45}
+.agent-hero .warn a{color:#fff}
+.switch{position:relative;display:inline-block;width:40px;height:22px;flex:none;cursor:pointer}
+.switch input{opacity:0;width:0;height:0;position:absolute}
+.switch span{position:absolute;inset:0;border-radius:11px;background:#56627E;transition:background .15s}
+.switch span::after{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .15s}
+.switch input:checked + span{background:var(--amber)}
+.switch input:checked + span::after{transform:translateX(18px)}
+.switch input:focus-visible + span{outline:2px solid #fff;outline-offset:2px}
+.steps .check{align-items:flex-start;line-height:1.35}
+.steps .check small{display:block;color:var(--muted);font-size:11.5px}
+.ag-acts{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.ag-acts .btn{justify-content:center;white-space:normal;text-align:center;line-height:1.25;min-height:34px}
+.ser-list{display:flex;flex-direction:column;gap:4px}
+.ser-it{display:flex;gap:8px;align-items:center;width:100%;text-align:left;border:1px solid var(--line-soft);background:var(--surface);border-radius:8px;padding:7px 9px;cursor:pointer}
+.ser-it:hover{background:var(--hover)}
+.ser-it .nm{flex:1;min-width:0;font-weight:500;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ser-it small{color:var(--faint);font-size:11px;white-space:nowrap}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:1px 8px;border-radius:10px;font-size:11.5px;background:var(--sel);color:var(--text);text-decoration:none;cursor:pointer;border:0}
+.chip svg.i{width:12px;height:12px}
+.chip.ag{background:var(--amber-soft);color:var(--amber-ink)}
+.chip.bad{background:var(--err-soft);color:var(--err)}
+/* timeline */
+.tl{flex:none;background:var(--surface);border-bottom:1px solid var(--line);padding:7px 14px 6px;user-select:none}
+.tl canvas{width:100%;height:26px;display:block;cursor:pointer;border-radius:4px;background:var(--sunk)}
+.tl .lg{display:flex;gap:14px;font-size:11px;color:var(--muted);margin-top:4px;flex-wrap:wrap;align-items:center}
+.tl .lg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.tl .lg .sp{flex:1}
+.tl .lg button{border:0;background:none;color:var(--text);text-decoration:underline;text-underline-offset:2px;cursor:pointer;font-size:11px;padding:0}
+/* dòng có vấn đề / Agent đã sửa */
+.r.iss > .n{box-shadow:inset 3px 0 var(--err)}
+.r.ed > .n{box-shadow:inset 3px 0 var(--amber)}
+.r .agn{grid-column:1/-1;padding:0 12px 8px 64px;font-size:12px;display:flex;flex-direction:column;gap:3px;white-space:normal}
+.r.sub .agn{padding-left:168px}
+.agn .iss{color:var(--err)}
+.agn .ed{color:var(--amber-ink);display:flex;gap:10px;flex-wrap:wrap;align-items:baseline}
+.agn .ed s{color:var(--muted)}
+.agn .lnk{border:0;background:none;padding:0;color:var(--text);text-decoration:underline;text-underline-offset:2px;cursor:pointer;font-size:12px}
+/* bộ nhớ cốt truyện */
+.dlg.wide{width:min(1120px,calc(100vw - 32px));height:calc(100vh - 48px);display:flex;flex-direction:column}
+.dlg.wide .dlg-b{flex:1;overflow:auto;padding-top:12px}
+.mem-top{display:flex;gap:10px;align-items:center;padding:10px 20px;border-bottom:1px solid var(--line-soft);flex-wrap:wrap}
+.mem-top select{width:auto;min-width:220px}
+.mem-top .seg{width:auto}
+.mem-tool{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.mem-tool input[type=text]{width:220px}
+.mem-tool select{width:auto}
+table.mt{width:100%;border-collapse:collapse;font-size:12.5px}
+table.mt th{text-align:left;font:600 11.5px var(--head);color:var(--muted);padding:6px 6px;border-bottom:1px solid var(--line);position:sticky;top:-12px;background:var(--surface);z-index:1}
+table.mt td{padding:3px 4px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
+table.mt input[type=text],table.mt select{padding:4px 6px;background:transparent;border-color:transparent}
+table.mt input[type=text]:hover,table.mt select:hover{border-color:var(--line)}
+table.mt input[type=text]:focus{background:var(--surface);border-color:var(--primary)}
+table.mt tr.new td{background:var(--amber-soft)}
+table.mt .src{font-weight:500}
+table.mt td.c{text-align:center;width:44px}
+table.mt .x{border:0;background:none;color:var(--faint);cursor:pointer;font-size:15px;padding:2px 6px;border-radius:4px}
+table.mt .x:hover{color:var(--err);background:var(--err-soft)}
+.ep-card{border:1px solid var(--line-soft);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+.ep-card .row{margin-bottom:6px}
+.ep-card input.ep{width:80px}
+.ep-card textarea{min-height:64px}
+.mem-foot{display:flex;gap:8px;align-items:center;padding:12px 20px;border-top:1px solid var(--line)}
+.mem-empty{padding:40px 10px;text-align:center;color:var(--muted)}
+.btn.danger{color:var(--err)}
 </style>
 </head>
 <body>
 <div class="shell">
   <div class="top">
-    <div class="brand">%%LOGO%%<b>Dịch Sub &amp; Book</b><em>by Duy Anh</em><span class="ver">v3.3</span></div>
+    <div class="brand">%%LOGO%%<b>Dịch Sub &amp; Book</b><em>by Duy Anh</em><span class="ver">v4.0 Agent</span></div>
     <div class="spacer"></div>
     <button class="btn sm" id="assTop" title="Chuyển file SRT, VTT, ASS có sẵn sang ASS nền đen (không cần dịch)"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M6 14h12v3H6z" style="fill:currentColor"/></svg>SRT → ASS nền đen</button>
     <button class="btn ghost sm" id="updBtn" title="Kiểm tra bản mới trên GitHub"><svg class="i" viewBox="0 0 24 24"><path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14"/></svg><span id="updTxt">Cập nhật</span><span class="dotu" id="updDot" hidden></span></button>
@@ -370,6 +444,7 @@ textarea{resize:vertical;min-height:70px;line-height:1.45}
       <button data-p="stt" data-tip="Giọng nói ra phụ đề (video, âm thanh)"><svg class="i" viewBox="0 0 24 24"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3M8 21h8"/></svg><span class="badge" id="sttBadge" hidden></span></button>
       <button data-p="ocr" data-tip="Quét phụ đề in sẵn trong video (OCR)"><svg class="i" viewBox="0 0 24 24"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M8 10h8M8 14h5"/></svg><span class="badge" id="ocrBadge" hidden></span></button>
       <button data-p="svc" data-tip="Dịch vụ dịch"><svg class="i" viewBox="0 0 24 24"><path d="M4 5h8M8 3v2M6 5c0 4 2 7 6 9M10 5c-1 4-3 7-6 9M13 21l4-9 4 9M14.5 18h5"/></svg></button>
+      <button data-p="agent" data-tip="Agent Editor: nhớ cốt truyện, tự hiệu đính" id="agentRail"><svg class="i" viewBox="0 0 24 24"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.5L12 15l-1.8-4.5L5.5 9l4.7-1.4zM19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9zM5 16l.7 1.5L7 18l-1.3.6L5 20l-.7-1.4L3 18l1.3-.5z"/></svg></button>
       <button data-p="style" data-tip="Văn phong và từ điển"><svg class="i" viewBox="0 0 24 24"><path d="M2 5h6a3 3 0 0 1 3 3v12a2 2 0 0 0-2-2H2zM22 5h-6a3 3 0 0 0-3 3v12a2 2 0 0 1 2-2h7z"/></svg></button>
       <button data-p="out" data-tip="Xuất file"><svg class="i" viewBox="0 0 24 24"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 19h16"/></svg></button>
       <button data-p="log" data-tip="Nhật ký"><svg class="i" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span class="badge" id="logBadge" hidden></span></button>
@@ -434,6 +509,7 @@ textarea{resize:vertical;min-height:70px;line-height:1.45}
         </div>
         <!-- Văn phong -->
         <div class="pv" id="p-style"><div id="styleBox"></div></div>
+        <div class="pv" id="p-agent"><div id="agentBox"></div></div>
         <!-- Xuất file -->
         <div class="pv" id="p-out">
           <div class="sec"><h3>Định dạng</h3>
@@ -587,8 +663,10 @@ textarea{resize:vertical;min-height:70px;line-height:1.45}
               <button class="btn sm" id="runCh">Dịch phần này</button>
               <div class="seg" id="viewSeg" style="width:auto"><button data-v="edit" class="on">Song song</button><button data-v="read">Đọc bản dịch</button></div>
               <label class="check" style="margin:0"><input type="checkbox" id="onlyPending"> Chưa dịch</label>
+              <label class="check" style="margin:0" title="Dòng có lỗi hoặc Agent đã sửa"><input type="checkbox" id="onlyFlag"> Cần xem</label>
               <input type="text" id="search" placeholder="Tìm trong phần này">
             </div>
+            <div class="tl" id="tl" hidden><canvas id="tlc" aria-label="Timeline phụ đề"></canvas><div class="lg"><span><i style="background:var(--line)"></i>Chưa dịch</span><span><i style="background:var(--ok)"></i>Đã dịch</span><span><i style="background:var(--err)"></i>Cần xem</span><span><i style="background:var(--amber)"></i>Agent đã sửa</span><span class="sp"></span><span id="tlInfo"></span><button id="tlNext">Chỗ cần xem tiếp theo</button></div></div>
             <div class="screen" id="screen" hidden><div class="tc" id="scTc"></div><div class="src" id="scSrc"></div><div class="vi empty" id="scVi"></div></div>
             <div class="rows" id="rows"></div>
           </div>
@@ -632,6 +710,23 @@ textarea{resize:vertical;min-height:70px;line-height:1.45}
     </div>
   </div>
 </div>
+<div class="overlay" id="memDlg" hidden>
+  <div class="dlg wide" role="dialog" aria-modal="true" aria-labelledby="memT">
+    <div class="dlg-h"><svg class="i" viewBox="0 0 24 24" style="width:20px;height:20px"><path d="M12 3a4 4 0 0 0-4 4 4 4 0 0 0-3 6.5A4 4 0 0 0 8 20h1V3zM12 3a4 4 0 0 1 4 4 4 4 0 0 1 3 6.5A4 4 0 0 1 16 20h-1V3"/></svg><b id="memT">Bộ nhớ cốt truyện</b><button class="btn ghost sm" id="memClose">Đóng</button></div>
+    <div class="mem-top">
+      <select id="memSer" aria-label="Chọn bộ phim"></select>
+      <div class="seg" id="memTab"><button data-v="terms" class="on">Tên, thuật ngữ</button><button data-v="rel">Xưng hô</button><button data-v="eps">Các tập</button><button data-v="story">Cốt truyện</button></div>
+    </div>
+    <div class="dlg-b" id="memBody"></div>
+    <div class="mem-foot">
+      <button class="btn sm" id="memExport">Xuất bộ nhớ</button>
+      <button class="btn sm" id="memImport">Nhập bộ nhớ…</button>
+      <span class="grow hint" id="memInfo" style="margin:0"></span>
+      <button class="btn sm danger" id="memDel">Xoá bộ phim này</button>
+    </div>
+  </div>
+</div>
+<input type="file" id="memIn" hidden accept=".json">
 <div class="overlay" id="updOverlay" hidden><div class="box"><b id="updOvT">Đang khởi động lại…</b><span id="updOvS">App đang cài bản mới, cửa sổ sẽ tự tải lại.</span></div></div>
 
 <script>
@@ -664,6 +759,12 @@ const SERVICES = {
   openrouter:{group:"AI, cần API key, dịch mượt như người", name:"OpenRouter", sub:"Hàng trăm model, có model miễn phí (:free).", kind:"llm",
        url:"https://openrouter.ai/api/v1", model:"", models:[], keyUrl:"https://openrouter.ai/keys", delay:3},
   custom:{group:"AI, cần API key, dịch mượt như người", name:"API tùy chỉnh", sub:"Bất kỳ dịch vụ tương thích OpenAI.", kind:"llm", url:"", model:"", models:[], delay:0},
+  claude_cli:{group:"AI Agent trên máy, dùng tài khoản đã đăng nhập", name:"Claude Code", sub:"Dùng gói Claude Pro/Max đã đăng nhập trong Claude Code. Hiểu ngữ cảnh rất tốt.", kind:"cli",
+       models:["sonnet","opus","haiku"], hint:"Cài: mở CMD gõ <b>npm install -g @anthropic-ai/claude-code</b>, rồi gõ <b>claude</b> một lần để đăng nhập. Model để trống = mặc định của Claude Code."},
+  codex_cli:{group:"AI Agent trên máy, dùng tài khoản đã đăng nhập", name:"Codex", sub:"OpenAI Codex CLI, dùng tài khoản ChatGPT đã đăng nhập.", kind:"cli", models:[],
+       hint:"Cài: mở CMD gõ <b>npm install -g @openai/codex</b>, rồi gõ <b>codex login</b> để đăng nhập tài khoản ChatGPT."},
+  agy_cli:{group:"AI Agent trên máy, dùng tài khoản đã đăng nhập", name:"Antigravity", sub:"Google Antigravity CLI (agy), dùng tài khoản Google.", kind:"cli", models:[],
+       hint:"Cài: mở PowerShell gõ <b>irm https://antigravity.google/cli/install.ps1 | iex</b>, rồi gõ <b>agy</b> một lần để đăng nhập."},
   ollama:{group:"Chạy trên máy (GPU)", name:"Ollama", sub:"Model AI chạy offline trên card đồ họa.", kind:"local",
        url:"http://localhost:11434", model:"gemma3:12b", models:["gemma3:12b","gemma3:4b","qwen2.5:7b","qwen3:8b"], chunk:1200,
        hint:"Cài tại <a href='https://ollama.com/download' target='_blank'>ollama.com</a>, mở Ollama, rồi gõ trong CMD: <b>ollama pull gemma3:12b</b> (card 10–12GB) hoặc <b>gemma3:4b</b> (card yếu)."},
@@ -695,7 +796,7 @@ const job = () => jobs.find(j => j.id === sel);
 const fmtTime = s => { if(s == null) return ""; s = Math.round(s); const h = Math.floor(s/3600), m = Math.floor(s%3600/60); return h ? `${h} giờ ${m} phút` : (m ? `${m} phút` : `${s} giây`); };
 
 /* ---------------- điều hướng */
-const PANELS = {lib:"Tài liệu", stt:"Giọng nói ra phụ đề", ocr:"Quét phụ đề (OCR)", svc:"Dịch vụ dịch", style:"Văn phong và từ điển", out:"Xuất file", log:"Nhật ký"};
+const PANELS = {lib:"Tài liệu", stt:"Giọng nói ra phụ đề", ocr:"Quét phụ đề (OCR)", svc:"Dịch vụ dịch", agent:"Agent Editor", style:"Văn phong và từ điển", out:"Xuất file", log:"Nhật ký"};
 function showPanel(p, toggle=false){
   const mid = $("#mid"), cur = $(".rail button.on")?.dataset.p;
   if(toggle && cur === p && !mid.classList.contains("nopanel")){ mid.classList.add("nopanel"); $(".rail button.on")?.classList.remove("on"); return; }
@@ -704,7 +805,8 @@ function showPanel(p, toggle=false){
   $$(".pv").forEach(v => v.classList.toggle("on", v.id === "p-" + p));
   $("#panelTitle").textContent = PANELS[p];
   if(p === "out") requestAnimationFrame(renderBox);
-  if(p === "stt" || p === "ocr") setMode(p); else if(p === "lib" || p === "style") setMode("doc");
+  if(p === "stt" || p === "ocr") setMode(p); else if(p === "lib" || p === "style" || p === "agent") setMode("doc");
+  if(p === "agent") renderAgentPanel();
   if(p === "log"){ $("#logBadge").hidden = true; const b = $(".panel-b"); b.scrollTop = b.scrollHeight; }
   if(p === "svc" && cfg.service === "hachimi") loadHachimi();
   try{ localStorage.setItem("panel", p); }catch(e){}
@@ -719,7 +821,7 @@ function setMode(m){
 $$(".rail button[data-p]").forEach(b => b.onclick = () => {
   const p = b.dataset.p;
   // đang ở chế độ khác thì bấm lần đầu chỉ chuyển chế độ, không đóng bảng
-  if(((p === "stt" || p === "ocr") && mode !== p) || ((p === "lib" || p === "style") && mode !== "doc")) return showPanel(p);
+  if(((p === "stt" || p === "ocr") && mode !== p) || ((p === "lib" || p === "style" || p === "agent") && mode !== "doc")) return showPanel(p);
   showPanel(p, true);
 });
 $("#hidePanel").onclick = () => { $("#mid").classList.add("nopanel"); $(".rail button.on")?.classList.remove("on"); };
@@ -742,7 +844,8 @@ function svcCfg(id = cfg.service){
   if(c.key === undefined) c.key = "";
   if(c.delay === undefined) c.delay = d.delay || 0;
   if(c.chunk === undefined) c.chunk = d.chunk || 2500;
-  if(c.subBatch === undefined) c.subBatch = d.kind === "local" ? 25 : 40;
+  if(c.subBatch === undefined) c.subBatch = d.kind === "local" ? 25 : (d.kind === "cli" ? 60 : 40);
+  if(d.kind === "cli"){ if(c.path === undefined) c.path = ""; if(c.chunk === 2500 && !c._c) { c.chunk = 4000; c._c = 1; } }
   return c;
 }
 function runCfg(){ const c = svcCfg(); return {...cfg, batch: SERVICES[cfg.service].kind === "hachimi" ? c.batch : 40, delay:c.delay, chunk:c.chunk, subBatch:c.subBatch}; }
@@ -757,7 +860,7 @@ function renderServices(){
   $$("#svcList .svc").forEach(b => b.onclick = () => {
     cfg.service = b.dataset.id;
     if(cfg.service === "hachimi"){ cfg.source = "zh-CN"; cfg.target = "vi"; renderLangs(); }
-    saveCfg(); renderServices(); renderFields(); renderStatus(); renderSttPanel(); renderOcrPanel();
+    saveCfg(); renderServices(); renderFields(); renderStatus(); renderSttPanel(); renderOcrPanel(); renderAgentPanel();
   });
 }
 function renderFields(){
@@ -776,6 +879,13 @@ function renderFields(){
       <datalist id="modelList">${(s.models||[]).map(m => `<option value="${esc(m)}">`).join("")}</datalist>
       <div class="row"><div class="grow"><label class="f" for="fSubBatch">Dòng phụ đề mỗi lần</label><input type="number" id="fSubBatch" min="5" max="150" value="${c.subBatch}"></div>
       <div class="grow"><label class="f" for="fChunk">Ký tự sách mỗi lần</label><input type="number" id="fChunk" min="300" max="12000" step="100" value="${c.chunk}"></div></div>`;
+  if(s.kind === "cli") h += `<div class="hint" id="cliStat" style="margin-top:0">Đang tìm trên máy…</div>
+      <label class="f" for="fPath">File chạy (để trống = tự tìm)</label>
+      <div class="row"><input type="text" id="fPath" class="grow" value="${esc(c.path||"")}" placeholder="vd. C:\\Users\\Ten\\AppData\\Roaming\\npm\\${id === "agy_cli" ? "agy.exe" : id.split("_")[0] + ".cmd"}"><button class="btn sm" id="fCheck">Kiểm tra</button></div>
+      <label class="f" for="fModel">Model (để trống = mặc định)</label><input type="text" id="fModel" list="modelList" value="${esc(c.model)}" placeholder="mặc định">
+      <datalist id="modelList">${(s.models||[]).map(m => `<option value="${esc(m)}">`).join("")}</datalist>
+      <div class="row"><div class="grow"><label class="f" for="fSubBatch">Dòng phụ đề mỗi lần</label><input type="number" id="fSubBatch" min="10" max="200" value="${c.subBatch}"></div>
+      <div class="grow"><label class="f" for="fChunk">Ký tự sách mỗi lần</label><input type="number" id="fChunk" min="500" max="20000" step="100" value="${c.chunk}"></div></div>`;
   if(s.kind === "llm") h += `<label class="f" for="fDelay">Nghỉ giữa các lần gửi (giây)</label><input type="number" id="fDelay" min="0" max="120" value="${c.delay}">`;
   if(s.kind === "hachimi")
     h += `<label class="f">Chạy bằng</label><div class="seg" id="hmDev">
@@ -785,7 +895,8 @@ function renderFields(){
   if(s.hint) h += `<div class="hint">${s.hint}</div>`;
   $("#svcFields").innerHTML = h;
   const bind = (q, key, isNum) => { const el = $(q); if(el) el.oninput = el.onchange = () => { c[key] = isNum ? Number(el.value) : el.value.trim(); saveCfg(); }; };
-  bind("#fUrl","url"); bind("#fKey","key"); bind("#fModel","model"); bind("#fBatch","batch",1); bind("#fDelay","delay",1); bind("#fChunk","chunk",1); bind("#fSubBatch","subBatch",1);
+  bind("#fUrl","url"); bind("#fKey","key"); bind("#fPath","path");
+  if(s.kind === "cli"){ cliCheck(id); $("#fCheck").onclick = () => cliCheck(id); } bind("#fModel","model"); bind("#fBatch","batch",1); bind("#fDelay","delay",1); bind("#fChunk","chunk",1); bind("#fSubBatch","subBatch",1);
   if($("#hmDev")) $("#hmDev").onclick = e => { const b = e.target.closest("button"); if(!b) return; c.device = b.dataset.v; $$("#hmDev button").forEach(x => x.classList.toggle("on", x === b)); saveCfg(); };
   if(s.kind === "hachimi"){ hmData = null; loadHachimi(); }
   if($("#fShow")) $("#fShow").onclick = e => { const k = $("#fKey"); k.type = k.type === "password" ? "text" : "password"; e.target.textContent = k.type === "password" ? "Hiện" : "Ẩn"; };
@@ -1600,7 +1711,7 @@ async function openDoc(id){
   const d = await api("/api/book?id=" + id);
   book = d; evPos = d.evTotal;
   $("#welcome").hidden = true; $("#docView").hidden = false;
-  renderStyle(); renderHead();
+  renderStyle(); renderHead(); renderAgentPanel(); agRevs[id] = job()?.agentRev; loadTl();
   const firstTodo = d.progress.findIndex(([dn, t]) => dn < t);
   await openCh(firstTodo >= 0 ? firstTodo : 0);
 }
@@ -1609,7 +1720,7 @@ function renderHead(){
   const sub = j.kind === "sub";
   $("#dIc").className = "ic " + (sub ? "sub" : "book"); $("#dIc").innerHTML = ICON[j.kind];
   $("#dIc").style.background = sub ? "" : ""; $("#dName").textContent = j.name; $("#dName").title = j.name;
-  $("#dMeta").innerHTML = `<span>${extName(j)}</span><span>${LANG_SHORT[j.lang]||j.lang}</span><span>${sub ? num(j.total) + " dòng" : num(j.chapters) + " chương, " + num(j.total) + " đoạn, " + num(j.chars) + " ký tự"}</span><span class="st ${j.status}">${STATUS[j.status]}</span>${j.saved ? `<a href="#" id="openSaved" title="${esc(j.saved)}">Mở thư mục đã lưu</a>` : ""}`;
+  $("#dMeta").innerHTML = `<span>${extName(j)}</span><span>${LANG_SHORT[j.lang]||j.lang}</span><span>${sub ? num(j.total) + " dòng" : num(j.chapters) + " chương, " + num(j.total) + " đoạn, " + num(j.chars) + " ký tự"}</span><span class="st ${j.status}">${STATUS[j.status]}</span>${j.series ? `<button class="chip" id="serChip" title="Mở bộ nhớ cốt truyện">${SER_ICON}${esc(serName(j.series) || "Bộ phim")}${j.ep ? " · Tập " + esc(j.ep) : ""}</button>` : (agActive() ? `<button class="chip ag" id="serChip" title="Agent tự nhận bộ phim khi dịch">${AGENT_ICON}Agent Editor</button>` : "")}${j.issues ? `<button class="chip bad" id="issChip" title="Lọc các dòng cần xem">${num(j.issues)} cần xem</button>` : ""}${j.saved ? `<a href="#" id="openSaved" title="${esc(j.saved)}">Mở thư mục đã lưu</a>` : ""}`;
   const pct = j.total ? Math.floor(j.done * 100 / j.total) : 0;
   $("#pNums").textContent = `${num(j.done)} / ${num(j.total)}`; $("#pPct").textContent = pct + "%";
   $("#pBar").className = "bar" + (pct === 100 ? " done" : ""); $("#pBar").firstElementChild.style.width = pct + "%";
@@ -1620,6 +1731,8 @@ function renderHead(){
   $("#olTitle").textContent = sub ? "Đoạn thời gian" : "Chương";
   $("#screen").hidden = !sub || view === "read";
   if($("#openSaved")) $("#openSaved").onclick = e => { e.preventDefault(); api("/api/open_folder", {path:j.saved}); };
+  if($("#serChip")) $("#serChip").onclick = () => j.series ? openMem(j.series) : showPanel("agent");
+  if($("#issChip")) $("#issChip").onclick = () => { $("#onlyFlag").checked = true; renderRows(); };
 }
 function renderOutline(){
   const prog = book.progress || [];
@@ -1640,16 +1753,16 @@ async function openCh(i){
   $("#outline .ch.on")?.scrollIntoView({block:"nearest"});
   const c = book.chapters[i]; $("#chName").textContent = c.vi || c.title;
   $("#prevCh").disabled = i === 0; $("#nextCh").disabled = i >= book.chapters.length - 1;
-  renderRows(); renderHead();
+  renderRows(); renderHead(); drawTl();
 }
 
 /* ---------------- trình sửa */
 $("#viewSeg").onclick = e => { const b = e.target.closest("button"); if(!b) return; view = b.dataset.v; $$("#viewSeg button").forEach(x => x.classList.toggle("on", x === b)); renderRows(); renderHead(); };
-$("#search").oninput = () => renderRows(); $("#onlyPending").onchange = () => renderRows();
+$("#search").oninput = () => renderRows(); $("#onlyPending").onchange = () => renderRows(); $("#onlyFlag").onchange = () => renderRows();
 function visibleIdx(){
-  const q = $("#search").value.trim().toLowerCase(), only = $("#onlyPending").checked;
+  const q = $("#search").value.trim().toLowerCase(), only = $("#onlyPending").checked, flag = $("#onlyFlag").checked;
   return chData.segs.map((s, k) => k).filter(k => { const s = chData.segs[k];
-    return (!only || s[1] === null) && (!q || s[0].toLowerCase().includes(q) || (s[1]||"").toLowerCase().includes(q)); });
+    return (!only || s[1] === null) && (!flag || s[4] || s[5]) && (!q || s[0].toLowerCase().includes(q) || (s[1]||"").toLowerCase().includes(q)); });
 }
 function renderRows(){
   const box = $("#rows"); rowEls = [];
@@ -1668,7 +1781,7 @@ function renderRows(){
     const s = chData.segs[k], r = document.createElement("div");
     r.className = "r" + (sub ? " sub" : "") + (s[2] === "h" ? " h" : ""); r.dataset.k = k;
     r.innerHTML = `<div class="n">${chData.start + k + 1}</div>${sub ? `<div class="tm">${esc((s[3]||"").replace(" --> ", "\n"))}</div>` : ""}<div class="s">${esc(s[0])}</div><div class="v"></div>`;
-    setVi(r, s[1]); frag.appendChild(r); rowEls[k] = r;
+    setVi(r, s[1]); setAg(r, k); frag.appendChild(r); rowEls[k] = r;
   }
   box.innerHTML = ""; box.appendChild(frag); box.scrollTop = 0;
   if(sub) showScreen(idx.find(k => chData.segs[k][1] === null) ?? idx[0]);
@@ -1680,6 +1793,7 @@ function showScreen(k, hover){
   if(!hover){ rowEls[curRow]?.classList.remove("cur"); curRow = k; rowEls[k]?.classList.add("cur"); }
   $("#scTc").textContent = `#${chData.start + k + 1}   ${s[3]||""}`; $("#scSrc").textContent = plain(s[0]);
   $("#scVi").textContent = s[1] === null ? "Chưa dịch" : plain(s[1]); $("#scVi").classList.toggle("empty", s[1] === null);
+  if(!hover) drawTl();
 }
 $("#rows").addEventListener("mouseover", e => { const r = e.target.closest(".r"); if(r && !document.querySelector(".r .v textarea")) showScreen(+r.dataset.k, true); });
 $("#rows").addEventListener("click", e => {
@@ -1690,7 +1804,7 @@ $("#rows").addEventListener("click", e => {
   v.textContent = ""; v.classList.remove("pending"); v.appendChild(ta); ta.focus(); ta.style.height = Math.max(44, ta.scrollHeight + 2) + "px";
   const done = async save => {
     const val = ta.value.replace(/\s+$/, ""); ta.remove();
-    if(save && val !== (s[1] ?? "")){ s[1] = val.trim() ? val : null;
+    if(save && val !== (s[1] ?? "")){ s[1] = val.trim() ? val : null; s[4] = null; s[5] = null; setAg(r, k);
       try{ await api("/api/edit", {id:sel, i:chData.start + k, text:val}); }catch(err){ toast(err.message, "err"); } }
     setVi(r, s[1]); showScreen(k);
   };
@@ -1752,6 +1866,10 @@ $("#moreBtn").onclick = e => {
   menu(e.currentTarget, [
     {label:"Dịch lại từ đầu", run:() => translate([sel], {restart:true})},
     {label:"Văn phong và từ điển", run:() => showPanel("style")},
+    "-",
+    {label:"Agent: thẩm định, hiệu đính lại", run:() => agentRun("review")},
+    {label:"Agent: kiểm tra lỗi ngay", hint:"không tốn AI", run:() => $("#agQa") ? $("#agQa").click() : api("/api/agent/qa", {id:sel, tgt:cfg.target}).then(poll)},
+    {label:"Bộ nhớ cốt truyện…", run:() => j.series ? openMem(j.series) : showPanel("agent")},
     ...(j.saved ? [{label:"Mở thư mục đã lưu", run:() => api("/api/open_folder", {path:j.saved})}] : []),
     "-",
     {label:"Xoá khỏi danh sách", cls:"danger", run:async () => {
@@ -1761,7 +1879,7 @@ $("#moreBtn").onclick = e => {
 };
 
 /* ---------------- làm mới, xoá lịch sử */
-function closeDoc(){ sel = null; book = null; chData = null; $("#docView").hidden = true; $("#welcome").hidden = false; renderStyle(); }
+function closeDoc(){ sel = null; book = null; chData = null; tlData = null; $("#docView").hidden = true; $("#welcome").hidden = false; renderStyle(); renderAgentPanel(); }
 async function refreshAll(){
   try{
     $("#log").innerHTML = ""; logPos = 0;
@@ -1800,8 +1918,8 @@ $("#clearLog").onclick = async () => { try{ await api("/api/clear_log", {}); $("
 /* ---------------- thanh trạng thái */
 function renderStatus(){
   const s = SERVICES[cfg.service] || {}, c = cfg.service ? svcCfg() : {};
-  const model = (s.kind === "llm" || s.kind === "local" || s.kind === "hachimi") && c.model ? ` (${c.model})` : "";
-  $("#sEngine").innerHTML = `<b>${esc(s.name||"")}</b>${esc(model)} sang ${esc((LANGS.find(l => l[0] === cfg.target)||[])[1]||"")}`;
+  const model = (s.kind === "llm" || s.kind === "local" || s.kind === "hachimi" || s.kind === "cli") && c.model ? ` (${c.model})` : "";
+  $("#sEngine").innerHTML = `<b>${esc(s.name||"")}</b>${esc(model)} sang ${esc((LANGS.find(l => l[0] === cfg.target)||[])[1]||"")}${agActive() ? ` · <span class="chip ag">${AGENT_ICON}Agent Editor</span>` : ""}`;
   const r = jobs.find(j => j.id === running);
   if(r){ const pct = r.total ? Math.floor(r.done * 100 / r.total) : 0;
     $("#sRun").innerHTML = `Đang dịch <b>${esc(r.name)}</b>: ${num(r.done)} / ${num(r.total)} (${pct}%)${r.rate ? `, ${Math.round(r.rate)} ${r.kind === "sub" ? "dòng" : "đoạn"}/phút` : ""}${r.eta != null ? `, còn khoảng ${fmtTime(r.eta)}` : ""}`; }
@@ -1849,6 +1967,9 @@ async function poll(){
     if(sel && !job()) closeDoc();
     renderDocs(); renderStatus();
     if(sel) renderHead();
+    const cj = job();
+    if(cj && agRevs[cj.id] !== undefined && agRevs[cj.id] !== cj.agentRev){ agRevs[cj.id] = cj.agentRev; refreshCh(); renderAgentPanel(); loadSeries(); if(!$("#memDlg").hidden) loadMem(); }
+    else if(cj) agRevs[cj.id] = cj.agentRev;
     if(cfg.service === "hachimi" && $("#hmPanel") && hmData && (Object.values(hmData.tasks || {}).some(t => t.state === "running") || hmData.probe?.state === "running" || running)) loadHachimi();
     if(d.logs.length){
       const box = $("#log"), pb = $(".panel-b"), onLog = $("#p-log").classList.contains("on"), atEnd = pb.scrollTop + pb.clientHeight >= pb.scrollHeight - 30;
@@ -1861,9 +1982,10 @@ async function poll(){
       if(d.reload){ const b = await api("/api/book?id=" + sel); book = b; evPos = b.evTotal; return openCh(chIdx); }
       if(d.updates && chData){
         let last = -1;
-        for(const [i, vi] of d.updates){ const k = i - chData.start; if(!chData.segs[k]) continue;
-          chData.segs[k][1] = vi; last = k;
-          const r = rowEls[k]; if(r && view === "edit"){ setVi(r, vi); r.classList.remove("flash"); void r.offsetWidth; r.classList.add("flash"); } }
+        for(const [i, vi, iss, ed] of d.updates){ const k = i - chData.start; if(!chData.segs[k]) continue;
+          chData.segs[k][1] = vi; chData.segs[k][4] = iss || null; chData.segs[k][5] = ed || null; last = k;
+          const r = rowEls[k]; if(r && view === "edit"){ setVi(r, vi); setAg(r, k); r.classList.remove("flash"); void r.offsetWidth; r.classList.add("flash"); } }
+        if(d.updates.length && Date.now() - tlT > 2500) loadTl();
         if(last >= 0){
           if(view === "read" || $("#onlyPending").checked) renderRows();
           else if(job()?.kind === "sub") showScreen(running === sel ? last : (curRow >= 0 ? curRow : last));
@@ -1875,6 +1997,290 @@ async function poll(){
   }catch(e){ if(!restarting && ++pollFails >= 4){ $("#lost").hidden = false; $("#connDot").classList.add("off"); } }
 }
 
+/* ---------------- Agent Editor */
+const AGENT_ICON = '<svg class="i" viewBox="0 0 24 24"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.5L12 15l-1.8-4.5L5.5 9l4.7-1.4zM19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9zM5 16l.7 1.5L7 18l-1.3.6L5 20l-.7-1.4L3 18l1.3-.5z"/></svg>';
+const SER_ICON = '<svg class="i" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18M8 5l-2 4M14 5l-2 4M20 5l-2 4"/></svg>';
+const KIND_NAMES = {char:"Nhân vật", place:"Địa danh", org:"Môn phái, tổ chức", realm:"Cảnh giới", skill:"Chiêu thức, công pháp", item:"Bảo vật, vật phẩm", title:"Danh xưng", other:"Khác"};
+let seriesList = [], agRevs = {}, tlData = null, tlT = 0;
+function agCfg(){ cfg.agent = cfg.agent || {}; const a = cfg.agent;
+  for(const [k, v] of [["on", true], ["analyze", true], ["review", true], ["summary", true]]) if(a[k] === undefined) a[k] = v;
+  return a; }
+const agSupported = (svc = cfg.service) => !["gtx","edge","hachimi"].includes(svc);
+const agActive = () => agCfg().on && agSupported();
+const serName = id => seriesList.find(s => s.id === id)?.name || "";
+async function loadSeries(){ try{ seriesList = (await api("/api/agent/series")).series; }catch(e){} renderAgentPanel(); if(sel) renderHead(); }
+
+function renderAgentPanel(){
+  const a = agCfg(), box = $("#agentBox"); if(!box) return;
+  const s = SERVICES[cfg.service] || {}, j = job();
+  let h = `<div class="sec"><div class="agent-hero"><div class="row"><b>${AGENT_ICON}Agent Editor</b><label class="switch" title="Bật / tắt Agent Editor"><input type="checkbox" id="agOn" ${a.on?"checked":""}><span></span></label></div>
+    <p>Đọc hiểu cả tập, nhớ tên nhân vật, cảnh giới, xưng hô qua mọi tập của bộ phim. Dịch theo ngữ cảnh rồi tự rà soát, hiệu đính trên timeline.</p>
+    ${a.on && !agSupported() ? `<div class="warn">${esc(s.name)} chỉ dịch máy, không dùng được Agent. Chọn <a href="#" id="agPickSvc">Claude Code, Codex, Antigravity, Gemini, Ollama…</a> trong Dịch vụ dịch.</div>` : ""}</div></div>
+  <div class="sec steps"><h3>Các bước Agent tự chạy</h3>
+    <label class="check"><input type="checkbox" id="agAnalyze" ${a.analyze?"checked":""}><span>Đọc hiểu trước khi dịch<small>Học tên nhân vật, địa danh, cảnh giới, chiêu thức, cách xưng hô mới</small></span></label>
+    <label class="check"><input type="checkbox" checked disabled><span>Dịch có ngữ cảnh<small>Gửi kèm sổ tay bộ phim, tóm tắt tập trước, các câu trước và sau</small></span></label>
+    <label class="check"><input type="checkbox" id="agReview" ${a.review?"checked":""}><span>Tự thẩm định và hiệu đính<small>Sửa câu dịch sai, dịch sót, sai tên, xưng hô lệch, câu quá dài</small></span></label>
+    <label class="check"><input type="checkbox" id="agSummary" ${a.summary?"checked":""}><span>Ghi nhớ tóm tắt tập<small>Dịch xong cả tập thì lưu tóm tắt để các tập sau hiểu mạch truyện</small></span></label></div>`;
+  if(!j) h += `<div class="sec"><h3>Bộ phim của tài liệu</h3><div class="empty-mini">Mở một phụ đề hoặc sách để gắn vào bộ phim trong bộ nhớ.</div></div>`;
+  else{
+    const opts = `<option value="auto" ${!j.series?"selected":""}>Tự nhận theo tên file</option>` + seriesList.map(x => `<option value="${x.id}" ${x.id===j.series?"selected":""}>${esc(x.name)}</option>`).join("") + `<option value="new">+ Tạo bộ phim mới…</option>`;
+    h += `<div class="sec"><h3>Bộ phim của tài liệu đang mở</h3>
+      <div class="row"><select id="agSer" class="grow" aria-label="Bộ phim">${opts}</select><input type="text" id="agEp" style="width:64px" placeholder="Tập" aria-label="Tập số" value="${esc(j.ep||"")}"></div>
+      <div class="hint" id="agGuess">${j.series ? "Các tập cùng bộ phim dùng chung tên, thuật ngữ và tóm tắt cốt truyện." : "Chưa gắn. Khi dịch, Agent tự nhận bộ phim theo tên file."}</div>
+      <button class="btn sm" id="agMem" style="margin-top:8px;width:100%;justify-content:center"${j.series?"":" disabled"}>Mở bộ nhớ cốt truyện</button></div>
+    <div class="sec"><h3>Làm trên tài liệu này</h3><div class="ag-acts">
+      <button class="btn sm" id="agQa" title="Không gửi AI, chạy ngay">Kiểm tra lỗi ngay</button>
+      <button class="btn sm" id="agRev">Thẩm định, hiệu đính lại</button>
+      <button class="btn sm" id="agLearn">Học tên, thuật ngữ</button>
+      <button class="btn sm" id="agSum">Tóm tắt tập vào bộ nhớ</button></div>
+      <div class="hint">${num(j.issues||0)} chỗ cần xem, ${num(j.edits||0)} câu Agent đã sửa.${j.edits ? ` <a href="#" id="agKeepAll">Giữ tất cả bản sửa</a>` : ""}</div></div>`;
+  }
+  h += `<div class="sec"><h3>Bộ nhớ đã có</h3>${seriesList.length ? `<div class="ser-list">${seriesList.map(x => `<button class="ser-it" data-id="${x.id}">${SER_ICON}<span class="nm">${esc(x.name)}</span><small>${num(x.terms)} tên · ${num(x.episodes)} tập</small></button>`).join("")}</div>` : `<div class="empty-mini">Chưa có bộ phim nào. Dịch một tập với Agent Editor để bắt đầu.</div>`}
+    <button class="btn sm" id="agImport" style="margin-top:8px">Nhập bộ nhớ từ file…</button></div>`;
+  box.innerHTML = h;
+  const save = () => { saveCfg(); renderStatus(); if(sel) renderHead(); };
+  $("#agOn").onchange = e => { a.on = e.target.checked; save(); renderAgentPanel(); };
+  for(const [id, k] of [["#agAnalyze","analyze"],["#agReview","review"],["#agSummary","summary"]]) $(id).onchange = e => { a[k] = e.target.checked; save(); };
+  if($("#agPickSvc")) $("#agPickSvc").onclick = e => { e.preventDefault(); showPanel("svc"); };
+  $$(".ser-it").forEach(b => b.onclick = () => openMem(b.dataset.id));
+  $("#agImport").onclick = () => { memSid = null; $("#memIn").click(); };
+  if(!j) return;
+  $("#agSer").onchange = async e => {
+    let v = e.target.value, name = "";
+    if(v === "new"){ name = prompt("Tên bộ phim / bộ truyện:", ""); if(!name){ renderAgentPanel(); return; } }
+    await linkSeries(v, $("#agEp").value.trim(), name);
+  };
+  $("#agEp").onchange = e => linkSeries(j.series || "auto", e.target.value.trim());
+  $("#agMem").onclick = () => j.series && openMem(j.series);
+  $("#agQa").onclick = async () => { try{ const d = await api("/api/agent/qa", {id:sel, tgt:cfg.target}); toast(d.issues ? `Tìm thấy ${d.issues} chỗ cần xem (đánh dấu đỏ trên timeline).` : "Không thấy lỗi nào.", d.issues ? "" : "ok"); poll(); }catch(err){ toast(err.message, "err"); } };
+  $("#agRev").onclick = () => agentRun("review");
+  $("#agLearn").onclick = () => agentRun("analyze");
+  $("#agSum").onclick = () => agentRun("summary");
+  if($("#agKeepAll")) $("#agKeepAll").onclick = async e => { e.preventDefault(); await api("/api/agent/accept_all", {id:sel}); poll(); };
+  if(!j.series) api("/api/agent/guess?id=" + sel).then(g => { if($("#agGuess") && g.name) $("#agGuess").innerHTML = `Agent sẽ nhận là <b>${esc(g.name)}</b>${g.ep ? `, tập ${esc(g.ep)}` : ""}${g.found ? " (đã có trong bộ nhớ)" : " (bộ mới)"}.`; }).catch(()=>{});
+}
+async function linkSeries(sid, ep, name){
+  try{ const d = await api("/api/agent/link", {id:sel, series:sid, ep, name}); if(book) book.settings = d.settings; await loadSeries(); poll(); toast(`Đã gắn vào “${serName(d.series)}”${d.ep ? ", tập " + d.ep : ""}.`, "ok"); }
+  catch(e){ toast(e.message, "err"); }
+}
+async function agentRun(task, chapter = null){
+  const s = SERVICES[cfg.service], c = svcCfg();
+  if(!agSupported()){ showPanel("svc"); return toast("Agent Editor cần dịch vụ AI: Claude Code, Codex, Antigravity, Gemini, OpenAI, DeepSeek, Ollama, LM Studio…", "err"); }
+  if(s.kind === "llm" && !c.key){ showPanel("svc"); return toast(`Chưa nhập API key cho ${s.name}.`, "err"); }
+  if((s.kind === "llm" || s.kind === "local") && !c.model){ showPanel("svc"); return toast("Chưa chọn model.", "err"); }
+  const j = job(); if(task !== "analyze" && j && !j.done) return toast("Tài liệu chưa có câu nào được dịch.");
+  try{ const d = await api("/api/agent/run", {ids:[sel], config:runCfg(), task, chapter}); toast(d.queued ? "Agent đang làm việc, xem tiến trình ở Nhật ký." : "Tài liệu đang dịch hoặc đang chờ."); poll(); }
+  catch(e){ toast(e.message, "err"); }
+}
+
+/* ---- trạng thái Agent của từng dòng */
+function agNote(k){
+  const s = chData.segs[k], iss = s[4], ed = s[5];
+  if(!iss && !ed) return "";
+  let h = "";
+  if(ed) h += `<div class="ed"><span>Agent sửa: ${esc(ed.why || "hiệu đính")}</span><s title="Bản trước khi sửa">${esc(plain(ed.old || ""))}</s><span><button class="lnk" data-act="revert">Hoàn tác</button> · <button class="lnk" data-act="accept">Giữ</button></span></div>`;
+  if(iss) h += `<div class="iss">${iss.map(esc).join(" · ")} <button class="lnk" data-act="ignore">Bỏ qua</button></div>`;
+  return h;
+}
+function setAg(r, k){
+  const s = chData.segs[k]; let n = r.querySelector(".agn");
+  r.classList.toggle("iss", !!s[4]); r.classList.toggle("ed", !!s[5] && !s[4]);
+  const h = agNote(k);
+  if(!h){ n?.remove(); return; }
+  if(!n){ n = document.createElement("div"); n.className = "agn"; r.appendChild(n); }
+  n.innerHTML = h;
+}
+$("#rows").addEventListener("click", async e => {
+  const b = e.target.closest(".agn .lnk"); if(!b) return;
+  e.stopPropagation();
+  const r = b.closest(".r"), k = +r.dataset.k;
+  try{ await api("/api/agent/" + b.dataset.act, {id:sel, i:chData.start + k}); }catch(err){ return toast(err.message, "err"); }
+  const s = chData.segs[k];
+  if(b.dataset.act === "revert"){ s[1] = s[5]?.old || null; s[5] = null; setVi(r, s[1]); showScreen(k); }
+  if(b.dataset.act === "accept") s[5] = null;
+  if(b.dataset.act === "ignore") s[4] = null;
+  setAg(r, k); loadTl();
+}, true);
+
+/* ---- timeline */
+async function loadTl(){
+  const j = job(); if(!j || j.kind !== "sub"){ $("#tl").hidden = true; tlData = null; return; }
+  tlT = Date.now();
+  try{ tlData = await api("/api/timeline?id=" + sel); }catch(e){ return; }
+  $("#tl").hidden = !tlData.cues.length; drawTl();
+}
+function drawTl(){
+  const cv = $("#tlc"); if(!tlData || $("#tl").hidden) return;
+  const dpr = devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight; if(!W) return;
+  cv.width = W * dpr; cv.height = H * dpr;
+  const g = cv.getContext("2d"), css = getComputedStyle(document.documentElement), col = v => css.getPropertyValue(v).trim();
+  g.scale(dpr, dpr); g.clearRect(0, 0, W, H);
+  const dur = tlData.dur || 1, C = [col("--line"), col("--ok"), col("--err"), col("--amber")];
+  const c = book?.chapters[chIdx];
+  if(c){ const a = tlData.cues.find(x => x[0] >= c.start), b = [...tlData.cues].reverse().find(x => x[0] < c.end);
+    if(a && b){ g.fillStyle = col("--sel"); g.fillRect(a[1] / dur * W, 0, Math.max(2, (b[2] - a[1]) / dur * W), H); } }
+  for(const st of [0, 1, 3, 2]) for(const [, a, b, s] of tlData.cues){ if(s !== st) continue;
+    const y = s >= 2 ? 3 : 7; g.fillStyle = C[s]; g.fillRect(a / dur * W, y, Math.max(1.5, (b - a) / dur * W), H - y * 2); }
+  const cur = curRow >= 0 && chData ? tlData.cues.find(x => x[0] === chData.start + curRow) : null;
+  if(cur){ g.fillStyle = col("--text"); g.fillRect(cur[1] / dur * W - 1, 0, 2, H); }
+  const n = s => tlData.cues.filter(x => x[3] === s).length;
+  $("#tlInfo").textContent = `${fmtDur(dur)} · ${num(n(2))} chỗ cần xem · ${num(n(3))} câu Agent đã sửa`;
+}
+$("#tlc").addEventListener("click", async e => {
+  if(!tlData) return; const rc = e.target.getBoundingClientRect(), t = (e.clientX - rc.left) / rc.width * tlData.dur;
+  let best = null; for(const x of tlData.cues){ const d = t < x[1] ? x[1] - t : (t > x[2] ? t - x[2] : 0); if(!best || d < best[0]) best = [d, x[0]]; }
+  if(best) gotoSeg(best[1]);
+});
+$("#tlc").addEventListener("mousemove", e => {
+  if(!tlData) return; const rc = e.target.getBoundingClientRect(), t = (e.clientX - rc.left) / rc.width * tlData.dur;
+  const x = tlData.cues.find(c => t >= c[1] - .3 && t <= c[2] + .3); e.target.title = x ? `#${x[0] + 1}  ${fmtDur(x[1])}  ${["Chưa dịch","Đã dịch","Cần xem","Agent đã sửa"][x[3]]}` : fmtDur(t);
+});
+$("#tlNext").onclick = () => { if(!tlData) return; const cur = chData ? chData.start + Math.max(curRow, 0) : -1;
+  const f = tlData.cues.filter(x => x[3] >= 2); const nx = f.find(x => x[0] > cur) || f[0]; if(nx) gotoSeg(nx[0]); else toast("Không còn chỗ nào cần xem."); };
+async function gotoSeg(i){
+  const ci = book.chapters.findIndex(c => i >= c.start && i < c.end); if(ci < 0) return;
+  if(ci !== chIdx || !chData) await openCh(ci);
+  const k = i - chData.start;
+  if(!rowEls[k]){ $("#search").value = ""; $("#onlyPending").checked = false; $("#onlyFlag").checked = false; renderRows(); }
+  rowEls[k]?.scrollIntoView({block:"center"}); showScreen(k); drawTl();
+}
+addEventListener("resize", () => drawTl());
+async function refreshCh(){
+  if(!sel || !book) return;
+  const sc = $("#rows").scrollTop;
+  try{ chData = await api(`/api/chapter?id=${sel}&ch=${chIdx}`); }catch(e){ return; }
+  if(!document.querySelector(".r .v textarea")){ renderRows(); $("#rows").scrollTop = sc; if(curRow >= 0) rowEls[curRow]?.classList.add("cur"); }
+  loadTl();
+}
+
+/* ---- bộ nhớ cốt truyện */
+let memSid = null, mem = null, memTab = "terms", memQ = "", memKind = "", memNew = false;
+async function openMem(sid){
+  memSid = sid || seriesList[0]?.id || null; $("#memDlg").hidden = false;
+  await loadMem();
+}
+async function loadMem(){
+  $("#memSer").innerHTML = seriesList.map(s => `<option value="${s.id}" ${s.id===memSid?"selected":""}>${esc(s.name)}</option>`).join("");
+  if(!memSid){ mem = null; $("#memBody").innerHTML = `<div class="mem-empty">Chưa có bộ phim nào trong bộ nhớ.</div>`; return; }
+  try{ mem = await api("/api/agent/memory?series=" + memSid); }catch(e){ mem = null; $("#memBody").innerHTML = `<div class="mem-empty">${esc(e.message)}</div>`; return; }
+  $("#memT").textContent = "Bộ nhớ cốt truyện: " + mem.series.name;
+  $("#memInfo").textContent = `${num(mem.terms.length)} tên, thuật ngữ · ${num(mem.relations.length)} cách xưng hô · ${num(mem.episodes.length)} tập · ${num(mem.docs.length)} tài liệu đang mở`;
+  renderMem();
+}
+function closeMem(){ $("#memDlg").hidden = true; }
+$("#memClose").onclick = closeMem;
+$("#memDlg").addEventListener("click", e => { if(e.target.id === "memDlg") closeMem(); });
+document.addEventListener("keydown", e => { if(e.key === "Escape" && !$("#memDlg").hidden) closeMem(); });
+$("#memSer").onchange = e => { memSid = e.target.value; loadMem(); };
+$("#memTab").onclick = e => { const b = e.target.closest("button"); if(!b) return; memTab = b.dataset.v; $$("#memTab button").forEach(x => x.classList.toggle("on", x === b)); renderMem(); };
+const kindOpts = v => Object.entries(KIND_NAMES).map(([k, n]) => `<option value="${k}" ${k===v?"selected":""}>${n}</option>`).join("");
+function renderMem(){
+  const box = $("#memBody"); if(!mem) return;
+  if(memTab === "terms"){
+    const q = memQ.toLowerCase();
+    const rows = mem.terms.filter(t => (!memKind || t.kind === memKind || (memKind === "new" && !t.ok)) && (!q || t.src.toLowerCase().includes(q) || (t.vi||"").toLowerCase().includes(q) || (t.note||"").toLowerCase().includes(q)));
+    const newN = mem.terms.filter(t => !t.ok).length;
+    box.innerHTML = `<div class="mem-tool"><input type="text" id="mq" placeholder="Tìm tên, bản dịch, ghi chú" value="${esc(memQ)}">
+      <select id="mk"><option value="">Tất cả loại</option><option value="new" ${memKind==="new"?"selected":""}>AI mới đề xuất (${newN})</option>${Object.entries(KIND_NAMES).map(([k,n]) => `<option value="${k}" ${memKind===k?"selected":""}>${n}</option>`).join("")}</select>
+      <button class="btn sm primary" id="mAdd">+ Thêm tên</button>${newN ? `<button class="btn sm" id="mOkAll">Duyệt tất cả (${newN})</button>` : ""}
+      <span class="hint" style="margin:0">Dòng nền vàng là AI mới đề xuất. Sửa bản dịch ở đây thì mọi tập sau dịch theo tên mới.</span></div>
+      <table class="mt"><thead><tr><th style="width:17%">Nguyên văn</th><th style="width:20%">Bản dịch</th><th style="width:15%">Loại</th><th style="width:8%">Giới</th><th>Ghi chú</th><th style="width:5%">Tập</th><th class="c">Duyệt</th><th style="width:30px"></th></tr></thead><tbody>
+      ${memNew ? termRow({id:"", src:"", vi:"", kind:"char", gender:"", note:"", ok:1, first_ep:""}) : ""}
+      ${rows.map(termRow).join("")}</tbody></table>${!rows.length && !memNew ? `<div class="mem-empty">Không có mục nào.</div>` : ""}`;
+    $("#mq").oninput = e => { memQ = e.target.value; const p = e.target.selectionStart; renderMem(); const el = $("#mq"); el.focus(); el.setSelectionRange(p, p); };
+    $("#mk").onchange = e => { memKind = e.target.value; renderMem(); };
+    $("#mAdd").onclick = () => { memNew = true; renderMem(); box.querySelector("tr[data-id=''] input")?.focus(); };
+    if($("#mOkAll")) $("#mOkAll").onclick = async () => { for(const t of mem.terms.filter(t => !t.ok)) await api("/api/agent/term/save", {...t, series:memSid, ok:1}); await loadMem(); loadSeries(); };
+    box.querySelectorAll("tbody tr").forEach(tr => {
+      tr.addEventListener("change", () => saveTermRow(tr));
+      tr.querySelector(".x").onclick = async () => {
+        const id = tr.dataset.id; if(!id){ memNew = false; return renderMem(); }
+        const t = mem.terms.find(x => String(x.id) === id); if(!confirm(`Xoá “${t.src} → ${t.vi}” khỏi bộ nhớ?`)) return;
+        await api("/api/agent/term/delete", {id:+id}); mem.terms = mem.terms.filter(x => x !== t); renderMem(); loadSeries(); };
+    });
+  } else if(memTab === "rel"){
+    box.innerHTML = `<div class="mem-tool"><button class="btn sm primary" id="rAdd">+ Thêm cách xưng hô</button><span class="hint" style="margin:0">Ví dụ: Tiêu Viêm → Huân Nhi: tự xưng “ta”, gọi “Huân Nhi nhi”. Agent giữ đúng xưng hô này ở mọi tập.</span></div>
+      <table class="mt"><thead><tr><th style="width:18%">Người nói</th><th style="width:18%">Người nghe</th><th style="width:13%">Tự xưng</th><th style="width:13%">Gọi người nghe</th><th>Ghi chú</th><th class="c">Duyệt</th><th style="width:30px"></th></tr></thead><tbody>
+      ${memNew ? relRow({id:"", a:"", b:"", self_word:"", call_word:"", note:"", ok:1}) : ""}${mem.relations.map(relRow).join("")}</tbody></table>${!mem.relations.length && !memNew ? `<div class="mem-empty">Chưa có cách xưng hô nào.</div>` : ""}`;
+    $("#rAdd").onclick = () => { memNew = true; renderMem(); };
+    box.querySelectorAll("tbody tr").forEach(tr => {
+      tr.addEventListener("change", () => saveRelRow(tr));
+      tr.querySelector(".x").onclick = async () => { const id = tr.dataset.id; if(!id){ memNew = false; return renderMem(); }
+        await api("/api/agent/relation/delete", {id:+id}); mem.relations = mem.relations.filter(x => String(x.id) !== id); renderMem(); };
+    });
+  } else if(memTab === "eps"){
+    box.innerHTML = mem.episodes.length ? `<div class="hint" style="margin:0 0 10px">Agent đọc tóm tắt các tập trước khi dịch tập sau. Sửa trực tiếp nếu tóm tắt chưa đúng.</div>` + mem.episodes.map(e => `<div class="ep-card" data-id="${e.id}"><div class="row"><label class="hint" style="margin:0">Tập</label><input type="text" class="ep" value="${esc(e.ep == null ? "" : String(e.ep).replace(/\.0$/, ""))}"><span class="grow hint" style="margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(e.name)}</span><button class="btn ghost sm danger" data-del>Xoá</button></div><textarea>${esc(e.summary)}</textarea></div>`).join("")
+      : `<div class="mem-empty">Chưa có tóm tắt tập nào. Dịch xong một tập (bật “Ghi nhớ tóm tắt tập”) hoặc bấm “Tóm tắt tập vào bộ nhớ”.</div>`;
+    box.querySelectorAll(".ep-card").forEach(c => {
+      const save = () => api("/api/agent/episode/save", {id:+c.dataset.id, ep:c.querySelector(".ep").value.trim(), summary:c.querySelector("textarea").value}).catch(e => toast(e.message, "err"));
+      c.querySelector(".ep").onchange = save; c.querySelector("textarea").onchange = save;
+      c.querySelector("[data-del]").onclick = async () => { if(!confirm("Xoá tóm tắt tập này?")) return; await api("/api/agent/episode/delete", {id:+c.dataset.id}); loadMem(); loadSeries(); };
+    });
+  } else {
+    const s = mem.series;
+    box.innerHTML = `<div style="max-width:760px"><label class="f">Tên bộ phim / bộ truyện</label><input type="text" id="sName" value="${esc(s.name)}">
+      <label class="f">Cốt truyện đến hiện tại <span class="hint">(Agent tự cập nhật sau mỗi tập)</span></label><textarea id="sSyn" style="min-height:150px">${esc(s.synopsis)}</textarea>
+      <label class="f">Ghi chú cho Agent</label><textarea id="sNote" style="min-height:90px" placeholder="Thể loại, bối cảnh, văn phong mong muốn. Ví dụ: Tiên hiệp, dùng Hán Việt cho cảnh giới; nam chính xưng “ta”, gọi sư phụ là “lão sư”.">${esc(s.note)}</textarea>
+      <div class="hint">Tài liệu thuộc bộ này: ${mem.docs.length ? mem.docs.map(d => esc(d.name) + (d.ep ? ` (tập ${esc(d.ep)})` : "")).join(", ") : "chưa có"}.</div></div>`;
+    let t; const save = () => { clearTimeout(t); t = setTimeout(async () => { try{ mem.series = await api("/api/agent/series/save", {id:memSid, name:$("#sName").value.trim(), synopsis:$("#sSyn").value, note:$("#sNote").value}); loadSeries(); $("#memT").textContent = "Bộ nhớ cốt truyện: " + mem.series.name; }catch(e){ toast(e.message, "err"); } }, 500); };
+    $("#sName").oninput = save; $("#sSyn").oninput = save; $("#sNote").oninput = save;
+  }
+}
+function termRow(t){
+  return `<tr data-id="${t.id}" class="${t.ok ? "" : "new"}"><td><input type="text" class="src" data-f="src" value="${esc(t.src)}" placeholder="萧炎"></td><td><input type="text" data-f="vi" value="${esc(t.vi)}" placeholder="Tiêu Viêm"></td>
+    <td><select data-f="kind">${kindOpts(t.kind)}</select></td><td><select data-f="gender"><option value="" ${!t.gender?"selected":""}>–</option><option value="m" ${t.gender==="m"?"selected":""}>Nam</option><option value="f" ${t.gender==="f"?"selected":""}>Nữ</option></select></td>
+    <td><input type="text" data-f="note" value="${esc(t.note)}"></td><td class="hint" style="margin:0">${esc(t.first_ep||"")}</td><td class="c"><input type="checkbox" data-f="ok" ${t.ok?"checked":""} aria-label="Đã duyệt"></td><td><button class="x" title="Xoá">×</button></td></tr>`;
+}
+function relRow(r){
+  return `<tr data-id="${r.id}" class="${r.ok ? "" : "new"}"><td><input type="text" data-f="a" value="${esc(r.a)}" placeholder="Tiêu Viêm"></td><td><input type="text" data-f="b" value="${esc(r.b)}" placeholder="Huân Nhi"></td>
+    <td><input type="text" data-f="self_word" value="${esc(r.self_word)}" placeholder="ta"></td><td><input type="text" data-f="call_word" value="${esc(r.call_word)}" placeholder="muội"></td>
+    <td><input type="text" data-f="note" value="${esc(r.note)}"></td><td class="c"><input type="checkbox" data-f="ok" ${r.ok?"checked":""} aria-label="Đã duyệt"></td><td><button class="x" title="Xoá">×</button></td></tr>`;
+}
+const rowVals = tr => Object.fromEntries([...tr.querySelectorAll("[data-f]")].map(el => [el.dataset.f, el.type === "checkbox" ? (el.checked ? 1 : 0) : el.value.trim()]));
+async function saveTermRow(tr){
+  const v = rowVals(tr), id = tr.dataset.id, old = mem.terms.find(x => String(x.id) === id);
+  if(!v.src) return;
+  if(!id && !v.vi) return;
+  let apply = false;
+  if(old && old.vi && v.vi && old.vi !== v.vi && mem.docs.length) apply = confirm(`Đổi “${old.vi}” thành “${v.vi}” trong các tập đã dịch của bộ này?`);
+  try{
+    const d = await api("/api/agent/term/save", {...v, id: id ? +id : null, series:memSid, apply});
+    if(old) Object.assign(old, d.term); else { mem.terms.unshift(d.term); memNew = false; }
+    if(d.replaced) toast(`Đã thay ${d.replaced} chỗ trong các tập đã dịch.`, "ok");
+    if(!id || old?.ok !== d.term.ok) renderMem(); else tr.classList.toggle("new", !d.term.ok);
+    loadSeries();
+  }catch(e){ toast(e.message, "err"); }
+}
+async function saveRelRow(tr){
+  const v = rowVals(tr), id = tr.dataset.id;
+  if(!v.a || !v.b) return;
+  try{ const r = await api("/api/agent/relation/save", {...v, id: id ? +id : null, series:memSid});
+    const i = mem.relations.findIndex(x => String(x.id) === id); if(i >= 0) mem.relations[i] = r; else { mem.relations.unshift(r); memNew = false; renderMem(); }
+    tr.classList.toggle("new", !r.ok); }catch(e){ toast(e.message, "err"); }
+}
+$("#memExport").onclick = () => { if(memSid) location.href = "/api/agent/export?series=" + memSid; };
+$("#memImport").onclick = () => $("#memIn").click();
+$("#memIn").onchange = async () => {
+  const f = $("#memIn").files[0]; $("#memIn").value = ""; if(!f) return;
+  try{ const data = JSON.parse(await f.text()); const d = await api("/api/agent/import", {data, series: $("#memDlg").hidden ? null : memSid});
+    toast(`Đã nhập ${d.added} tên, thuật ngữ mới.`, "ok"); await loadSeries(); openMem(d.series); }
+  catch(e){ toast("Không nhập được: " + e.message, "err"); }
+};
+$("#memDel").onclick = async () => {
+  if(!memSid || !confirm(`Xoá toàn bộ bộ nhớ của “${mem?.series.name}”? Tên, thuật ngữ, xưng hô và tóm tắt các tập sẽ mất (bản dịch đã có không bị ảnh hưởng).`)) return;
+  await api("/api/agent/series/delete", {id:memSid}); await loadSeries(); memSid = seriesList[0]?.id || null; loadMem(); poll();
+};
+
+/* ---- AI Agent CLI (Claude Code, Codex, Antigravity) */
+async function cliCheck(id){
+  const c = svcCfg(id), el = $("#cliStat"); if(!el) return;
+  el.innerHTML = "Đang tìm trên máy…";
+  try{ const d = await api(`/api/agent/cli?kind=${id}&path=${encodeURIComponent(c.path||"")}`);
+    if(!$("#cliStat")) return;
+    el.innerHTML = d.found ? `<span style="color:var(--ok)">● Sẵn sàng</span> ${esc(d.version||"")}<br><small>${esc(d.path)}</small>${d.hint ? "<br>" + esc(d.hint) : ""}` : `<span style="color:var(--err)">● Chưa tìm thấy.</span> ${esc(d.hint||"")}`; }
+  catch(e){ el.textContent = e.message; }
+}
+
 /* ---------------- khởi động */
 (async () => {
   try{ cfg = await api("/api/config"); }catch(e){ cfg = {}; }
@@ -1882,9 +2288,9 @@ async function poll(){
   cfg.source = cfg.source || "auto"; cfg.target = cfg.target || "vi";
   cfg.format = cfg.format || "orig"; cfg.content = cfg.content || "vi"; if(cfg.autosave === undefined) cfg.autosave = true;
   try{ lastWin = JSON.stringify(cfg.win || {}); }catch(e){}
-  renderServices(); renderFields(); renderLangs(); segBind("#fmtSeg", "format"); segBind("#contentSeg", "content"); renderStyle(); renderSttPanel(); renderOcrPanel(); renderBox();
+  agCfg(); renderServices(); renderFields(); renderLangs(); segBind("#fmtSeg", "format"); segBind("#contentSeg", "content"); renderStyle(); renderSttPanel(); renderOcrPanel(); renderBox();
   $("#autosave").checked = cfg.autosave; $("#outDir").value = cfg.outDir || "";
-  await poll();
+  await poll(); await loadSeries();
   let last = null; try{ last = localStorage.getItem("doc"); }catch(e){}
   if(jobs.length) openDoc(jobs.find(j => j.id === last) ? last : jobs[0].id);
   try{ const p = localStorage.getItem("panel"); if(p && PANELS[p] && p !== "lib") showPanel(p); const m = localStorage.getItem("mode"); if(m === "stt" || m === "ocr") setMode(m); }catch(e){}

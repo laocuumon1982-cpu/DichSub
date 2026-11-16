@@ -3,7 +3,23 @@
 - **DichSub.exe**: bản 1 file, bấm đúp là chạy.
 - **DichSub-Portable.zip**: bản portable, giải nén rồi mở `DichSub.exe` bên trong. Mọi dữ liệu nằm trong thư mục `data`, chép sang USB hay máy khác là dùng tiếp.
 
-Đang dùng bản 3.1 trở lên: bấm nút "Có bản 3.3.2" ở góc trên app để tự cập nhật, giữ nguyên dữ liệu.
+Đang dùng bản 3.1 trở lên: bấm nút "Có bản 4.0.0" ở góc trên app để tự cập nhật, giữ nguyên dữ liệu.
+
+## Có gì mới trong 4.0.0: AGENT EDITOR, biết "nhớ cốt truyện"
+
+Hết cảnh tập 1 dịch một kiểu, tập 2 tên nhân vật, cảnh giới lại thành kiểu khác.
+
+- **Bộ nhớ cốt truyện dùng chung cho cả bộ phim**: tên nhân vật, địa danh, môn phái, cảnh giới, chiêu thức, cách xưng hô giữa các nhân vật, tóm tắt từng tập. Lưu trong một file SQLite, mở bảng sửa trực tiếp, xuất/nhập ra file JSON để chia sẻ.
+- **Tự nhận bộ phim và số tập theo tên file** (`Tap 05`, `E05`, `S01E05`, `第5集`...). Các tập cùng bộ tự dùng chung bộ nhớ.
+- **Agent tự chạy luồng Đọc hiểu → Dịch có ngữ cảnh → Thẩm định & hiệu đính → Ghi nhớ tập**:
+  - Đọc hiểu cả tập trước khi dịch, học tên mới. Tên đã có thì không bao giờ bị đổi, nên đồng bộ xuyên suốt hàng chục tập.
+  - Dịch kèm sổ tay bộ phim, tóm tắt các tập trước, các câu trước và sau.
+  - Tự rà soát: câu dịch sai, dịch sót, còn chữ nước ngoài, sai tên so với bộ nhớ, xưng hô lệch, câu quá dài so với thời gian hiện. Sửa xong ghi rõ lý do, giữ bản cũ để hoàn tác.
+  - Dịch xong cả tập thì tóm tắt tập và cập nhật cốt truyện chung cho các tập sau.
+- **Sửa trên timeline**: thanh timeline cả tập tô màu chưa dịch / đã dịch / cần xem / Agent đã sửa; bấm để nhảy tới câu, nút "Chỗ cần xem tiếp theo", lọc "Cần xem", Hoàn tác / Giữ / Bỏ qua ngay trên từng dòng.
+- **Đổi tên một lần, sửa mọi tập**: sửa bản dịch của một tên trong bộ nhớ, app hỏi thay luôn trong các tập đã dịch.
+- **Dùng AI Agent trên máy**: Claude Code, Codex, Antigravity (dùng tài khoản đã đăng nhập, không cần API key), cùng Gemini, OpenAI, DeepSeek, Groq, OpenRouter và AI chạy offline Ollama, LM Studio.
+- "Kiểm tra lỗi ngay" chạy không tốn AI. Tạo phụ đề từ video / quét OCR rồi "Tự dịch" cũng đi qua Agent.
 
 ## Có gì mới trong 3.3.2
 

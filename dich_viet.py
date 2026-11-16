@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Dịch Sub & Book v3.2 by Duy Anh — dịch phụ đề và sách/truyện sang tiếng Việt, tạo phụ đề từ video/âm thanh
+Dịch Sub & Book v4.0 Agent Editor by Duy Anh — dịch phụ đề và sách/truyện sang tiếng Việt, tạo phụ đề từ video/âm thanh
 (nhận giọng nói bằng Whisper) và quét chữ phụ đề in sẵn trong phim (OCR).
 Giao diện web chạy trong cửa sổ riêng (Edge/Chrome), backend Python.
 - Phụ đề: .srt .ass .ssa .vtt — giữ nguyên timeline và thẻ định dạng.
 - Sách: .epub .docx .txt .pdf .md .html .mobi .prc .azw .azw3 — chia chương, dịch theo đoạn, xuất lại đúng định dạng
   (Kindle xuất ra EPUB), hoặc TXT / EPUB. Từ điển tên riêng, văn phong, lưu tiến độ để dịch tiếp.
 - Dịch vụ: GTX API (Free), Edge API (Free), Gemini, OpenAI, DeepSeek, Groq, OpenRouter, API tùy chỉnh,
-  Ollama, LM Studio, HachimiMT (Trung -> Việt, chạy offline bằng GPU/CPU).
+  Ollama, LM Studio, HachimiMT (Trung -> Việt, chạy offline bằng GPU/CPU), Claude Code, Codex, Antigravity.
+- Agent Editor: bộ nhớ cốt truyện chung cho cả bộ phim, dịch có ngữ cảnh, tự kiểm tra và hiệu đính.
 - Giọng nói ra phụ đề: Whisper (faster-whisper) chạy offline bằng GPU/CPU, hoặc Groq / OpenAI Whisper.
 Một phần cách gọi GTX/Edge tham khảo từ rockbenben/subtitle-translator (MIT License).
 """
@@ -22,6 +23,7 @@ import queue
 import re
 import shutil
 import socket
+import sqlite3
 import struct
 import subprocess
 import sys
@@ -36,8 +38,8 @@ import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-APP_VERSION = "3.3.2"
-APP_NAME = "Dịch Sub & Book v3.3 by Duy Anh"
+APP_VERSION = "4.0.0"
+APP_NAME = "Dịch Sub & Book v4.0 Agent Editor by Duy Anh"
 GITHUB_REPO = "laocuumon1982-cpu/DichSub"     # nơi đăng bản mới (GitHub Releases)
 PORT = 47863
 HOME = os.path.expanduser("~")
@@ -4217,7 +4219,7 @@ def default_out_dir():
     return d if os.path.isdir(d) else HOME
 
 
-DEFAULT_SETTINGS = {"style": "tu_nhien", "note": "", "glossary": "", "fixes": ""}
+DEFAULT_SETTINGS = {"style": "tu_nhien", "note": "", "glossary": "", "fixes": "", "series": "", "ep": ""}
 
 
 class Job:
@@ -4238,6 +4240,32 @@ class Job:
         self.run_t0 = None        # lúc bắt đầu lượt dịch hiện tại
         self.run_n0 = 0           # số đoạn đã xong lúc bắt đầu
         self.out_dir = ""         # lưu riêng (vd. phụ đề tạo từ video: lưu cạnh video)
+        # Agent Editor: vấn đề tìm thấy, các câu Agent đã sửa (giữ bản cũ để hoàn tác)
+        self.agent = {"issues": {}, "edits": {}, "ignored": set(), "reviewed": set(), "analyzed": False}
+        self.agent_rev = 0
+
+    def load_agent(self):
+        try:
+            with open(os.path.join(self.dir, "agent.json"), encoding="utf-8") as f:
+                d = json.load(f)
+            n = len(self.book.segs)
+            self.agent = {"issues": {int(k): v for k, v in (d.get("issues") or {}).items() if int(k) < n},
+                          "edits": {int(k): v for k, v in (d.get("edits") or {}).items() if int(k) < n},
+                          "ignored": set(d.get("ignored") or []), "reviewed": set(d.get("reviewed") or []),
+                          "analyzed": bool(d.get("analyzed"))}
+        except (OSError, ValueError):
+            pass
+
+    def save_agent(self):
+        ag = self.agent
+        if not (ag["issues"] or ag["edits"] or ag["ignored"] or ag["reviewed"] or ag["analyzed"]) and \
+                not os.path.isfile(os.path.join(self.dir, "agent.json")):
+            return
+        tmp = os.path.join(self.dir, "agent.json.tmp")
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump({"issues": ag["issues"], "edits": ag["edits"], "ignored": sorted(ag["ignored"]),
+                       "reviewed": sorted(ag["reviewed"]), "analyzed": ag["analyzed"]}, f, ensure_ascii=False)
+        os.replace(tmp, os.path.join(self.dir, "agent.json"))
 
     @property
     def dir(self):
@@ -4261,7 +4289,9 @@ class Job:
                 "ext": getattr(self.book, "src_ext", self.book.ext),
                 "status": self.status, "done": done, "total": total, "error": self.error, "saved": self.saved,
                 "chapters": len(self.book.chapters), "title": self.book.title, "rate": rate, "eta": eta,
-                "chars": sum(len(s.src) for s in self.book.segs) if not hasattr(self, "_chars") else self._chars}
+                "chars": sum(len(s.src) for s in self.book.segs) if not hasattr(self, "_chars") else self._chars,
+                "series": self.settings.get("series", ""), "ep": self.settings.get("ep", ""),
+                "issues": len(self.agent["issues"]), "edits": len(self.agent["edits"]), "agentRev": self.agent_rev}
 
     def chapter_progress(self):
         segs = self.book.segs
@@ -4290,6 +4320,7 @@ class Job:
             with open(tmp, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False)
             os.replace(tmp, os.path.join(self.dir, "progress.json"))
+            self.save_agent()
             self.dirty = False
         except Exception as e:
             log_file(f"Không lưu được tiến độ {self.name}: {e}")
@@ -4356,6 +4387,7 @@ class State:
                         job.saved = prog.get("saved", "")
                         done, total = job.counts()
                         job.status = "done" if total and done == total else ("partial" if done else "ready")
+                job.load_agent()
                 items.append(job)
             except Exception as e:
                 log_file(f"Không mở được sách trong {d}: {e}")
@@ -4477,24 +4509,41 @@ class State:
                     s.vi = "\n".join(x.strip() for x in apply_pairs(s.vi, fixes).split("\n"))
                 job.events.append(data + a)
                 job.dirty = True
+            elif kind in ("agent", "memory"):
+                job.agent_rev += 1
+                job.dirty = True
 
         src = cfg.get("source") or "auto"
         tgt = cfg.get("target") or "vi"
         try:
             eng = make_engine(cfg, job, src, tgt, self.stop, post)
+            eng.offset = a
+            task = cfg.get("_agent")
+            if task:
+                if not isinstance(eng, AgentEngine):
+                    raise FatalError("Agent Editor cần dịch vụ AI (Claude Code, Codex, Antigravity, Gemini, OpenAI, "
+                                     "DeepSeek, Ollama, LM Studio...). GTX, Edge và HachimiMT không dùng được.")
+                eng.only = task
             if cfg.get("_restart"):
                 with self.lock:
-                    for s in segs:
+                    for k, s in enumerate(segs):
                         s.vi = None
+                        for key in ("issues", "edits"):
+                            job.agent[key].pop(k + a, None)
+                        job.agent["reviewed"].discard(k + a)
+                    job.agent["analyzed"] = False
                     job.events.append(-1)
-            self.log(f"Bắt đầu dịch {scope}.", job)
+            label = {"review": "thẩm định và hiệu đính", "analyze": "đọc hiểu, học tên", "summary": "tóm tắt tập"}.get(task)
+            self.log(f"Bắt đầu {label} {scope}." if label else f"Bắt đầu dịch {scope}.", job)
             t0 = time.time()
             job.run_t0, job.run_n0 = t0, job.counts()[0]
             eng.run(segs)
             rem = remaining_count(book.segs)
-            job.status = "done" if rem == 0 else "partial"
+            job.status = "done" if rem == 0 else ("partial" if job.counts()[0] else "ready")
             took = int(time.time() - t0)
-            if remaining_count(segs):
+            if task:
+                self.log(f"Agent xong sau {took // 60} phút {took % 60} giây.", job)
+            elif remaining_count(segs):
                 self.log(f"Còn {remaining_count(segs)} {eng.unit} chưa dịch. Bấm 'Dịch tiếp' để dịch phần còn thiếu.", job)
             else:
                 self.log(f"Xong {scope} sau {took // 60} phút {took % 60} giây.", job)
@@ -4550,12 +4599,23 @@ def make_engine(cfg, job, src, tgt, stop, post):
     if sub:
         batch = int(cfg.get("subBatch") or 40)
     pre = (lambda t: apply_pairs(t, glossary)) if glossary else None
+    ag = cfg.get("agent") or {}
+    if svc in CLI_AGENTS:
+        batch = int(sc.get("subBatch") or 60) if sub else batch
+        chunk = int(sc.get("chunk") or 4000)
+    if (ag.get("on") or cfg.get("_agent")) and agent_supported(svc):
+        eng = _make_engine(svc, sc, cfg, job, src, tgt, stop, post, batch, delay, chunk, sub, glossary, pre, st,
+                           agent=ag)
+        eng.unit = "dòng" if sub else "đoạn"
+        return eng
+    if ag.get("on"):
+        post("log", "Agent Editor cần dịch vụ AI, dịch vụ đang chọn chỉ dịch thường (không nhớ cốt truyện).")
     eng = _make_engine(svc, sc, cfg, job, src, tgt, stop, post, batch, delay, chunk, sub, glossary, pre, st)
     eng.unit = "dòng" if sub else "đoạn"
     return eng
 
 
-def _make_engine(svc, sc, cfg, job, src, tgt, stop, post, batch, delay, chunk, sub, glossary, pre, st):
+def _make_engine(svc, sc, cfg, job, src, tgt, stop, post, batch, delay, chunk, sub, glossary, pre, st, agent=None):
     if svc == "gtx":
         endpoint = sc.get("url") or GTX_ENDPOINT
         legacy = "/translate_a/" in endpoint
@@ -4572,21 +4632,1010 @@ def _make_engine(svc, sc, cfg, job, src, tgt, stop, post, batch, delay, chunk, s
                             loader=hachimi_loader(name, sc.get("device") or "auto"))
     lsrc = resolve_src(cfg, job)
     url, model = sc.get("url", ""), sc.get("model", "")
+    common = dict(style=st.get("style", "tu_nhien"), glossary=glossary, max_chars=chunk, sub=sub)
+    if svc in CLI_AGENTS:
+        backend = CliChat(svc, sc.get("path", ""), model, stop, post, timeout=int(sc.get("timeout") or 900))
+        if agent is not None:
+            return AgentEngine("cli", "", "", backend.name + (f" ({model})" if model else ""), batch, 0,
+                               st.get("note", ""), lsrc, tgt, stop, post, job=job, opts=agent, backend=backend, **common)
+        return CliBookEngine("cli", "", "", backend.name, batch, 0, st.get("note", ""), lsrc, tgt, stop, post,
+                             backend=backend, **common)
     if not model:
         raise FatalError("Chưa chọn model.")
-    common = dict(style=st.get("style", "tu_nhien"), glossary=glossary, max_chars=chunk, sub=sub)
+    Eng = BookLLMEngine
+    if agent is not None:
+        Eng = lambda *a, **kw: AgentEngine(*a, job=job, opts=agent, **kw)
     if svc == "ollama":
-        return BookLLMEngine("ollama", url or "http://localhost:11434", "", model, batch, 0, st.get("note", ""),
+        return Eng("ollama", url or "http://localhost:11434", "", model, batch, 0, st.get("note", ""),
                              lsrc, tgt, stop, post, **common)
     if svc == "lmstudio":
-        return BookLLMEngine("openai", url or "http://localhost:1234/v1", "", model, batch, 0, st.get("note", ""),
+        return Eng("openai", url or "http://localhost:1234/v1", "", model, batch, 0, st.get("note", ""),
                              lsrc, tgt, stop, post, **common)
     if not url:
         raise FatalError("Thiếu API URL.")
     if not sc.get("key"):
         raise FatalError("Chưa nhập API key cho dịch vụ này.")
-    return BookLLMEngine("openai", url, sc.get("key"), model, batch, delay, st.get("note", ""), lsrc, tgt,
-                         stop, post, **common)
+    return Eng("openai", url, sc.get("key"), model, batch, delay, st.get("note", ""), lsrc, tgt,
+               stop, post, **common)
+
+
+# ================================================================ AGENT EDITOR
+# Bộ nhớ cốt truyện (SQLite, dùng chung cho mọi tập của một bộ phim / bộ truyện), dịch có ngữ cảnh,
+# tự kiểm tra lỗi và hiệu đính. Chạy bằng AI API, AI trên máy (Ollama, LM Studio) hoặc AI Agent CLI
+# (Claude Code, Codex, Antigravity) dùng tài khoản đã đăng nhập trên máy.
+
+AGENT_DB_PATH = os.path.join(DATA_DIR, "agent_memory.db")
+TERM_KINDS = {"char": "Nhân vật", "place": "Địa danh", "org": "Môn phái, tổ chức", "realm": "Cảnh giới",
+              "skill": "Chiêu thức, công pháp", "item": "Bảo vật, vật phẩm", "title": "Danh xưng", "other": "Khác"}
+GENDER_EN = {"m": "male", "f": "female"}
+
+
+def _now():
+    return time.time()
+
+
+class StoryDB:
+    """Bộ nhớ cốt truyện: tên nhân vật, thuật ngữ, cách xưng hô, tóm tắt từng tập. Một file SQLite."""
+
+    SCHEMA = """
+    CREATE TABLE IF NOT EXISTS series(id TEXT PRIMARY KEY, name TEXT NOT NULL, lang TEXT DEFAULT '',
+        synopsis TEXT DEFAULT '', note TEXT DEFAULT '', created REAL, updated REAL);
+    CREATE TABLE IF NOT EXISTS terms(id INTEGER PRIMARY KEY AUTOINCREMENT, series TEXT NOT NULL, src TEXT NOT NULL,
+        vi TEXT DEFAULT '', kind TEXT DEFAULT 'other', gender TEXT DEFAULT '', note TEXT DEFAULT '',
+        ok INTEGER DEFAULT 0, hits INTEGER DEFAULT 0, first_ep TEXT DEFAULT '', updated REAL, UNIQUE(series, src));
+    CREATE TABLE IF NOT EXISTS relations(id INTEGER PRIMARY KEY AUTOINCREMENT, series TEXT NOT NULL, a TEXT NOT NULL,
+        b TEXT NOT NULL, self_word TEXT DEFAULT '', call_word TEXT DEFAULT '', note TEXT DEFAULT '',
+        ok INTEGER DEFAULT 0, updated REAL, UNIQUE(series, a, b));
+    CREATE TABLE IF NOT EXISTS episodes(id INTEGER PRIMARY KEY AUTOINCREMENT, series TEXT NOT NULL, job TEXT DEFAULT '',
+        ep REAL, name TEXT DEFAULT '', summary TEXT DEFAULT '', updated REAL, UNIQUE(series, job));
+    CREATE INDEX IF NOT EXISTS terms_s ON terms(series);
+    """
+
+    def __init__(self, path):
+        self.path = path
+        self.lock = threading.RLock()
+        self._c = None
+
+    def db(self):
+        if self._c is None:
+            os.makedirs(os.path.dirname(self.path), exist_ok=True)
+            c = sqlite3.connect(self.path, check_same_thread=False, timeout=15)
+            c.row_factory = sqlite3.Row
+            c.executescript(self.SCHEMA)
+            c.commit()
+            self._c = c
+        return self._c
+
+    def q(self, sql, args=(), one=False):
+        with self.lock:
+            cur = self.db().execute(sql, args)
+            rows = [dict(r) for r in cur.fetchall()]
+        return (rows[0] if rows else None) if one else rows
+
+    def x(self, sql, args=()):
+        with self.lock:
+            cur = self.db().execute(sql, args)
+            self.db().commit()
+            return cur.lastrowid
+
+    # ---- bộ phim
+    def series_list(self):
+        rows = self.q("SELECT * FROM series ORDER BY updated DESC")
+        for r in rows:
+            r["terms"] = self.q("SELECT COUNT(*) n FROM terms WHERE series=?", (r["id"],), True)["n"]
+            r["episodes"] = self.q("SELECT COUNT(*) n FROM episodes WHERE series=?", (r["id"],), True)["n"]
+        return rows
+
+    def series(self, sid):
+        return self.q("SELECT * FROM series WHERE id=?", (sid,), True)
+
+    def find_series(self, name):
+        key = series_key(name)
+        for r in self.q("SELECT * FROM series"):
+            if series_key(r["name"]) == key:
+                return r
+        return None
+
+    def save_series(self, d):
+        sid = d.get("id") or uuid.uuid4().hex[:10]
+        old = self.series(sid)
+        name = (d.get("name") or (old or {}).get("name") or "Bộ phim mới").strip()
+        vals = {k: d.get(k, (old or {}).get(k, "")) or "" for k in ("lang", "synopsis", "note")}
+        if old:
+            self.x("UPDATE series SET name=?, lang=?, synopsis=?, note=?, updated=? WHERE id=?",
+                   (name, vals["lang"], vals["synopsis"], vals["note"], _now(), sid))
+        else:
+            self.x("INSERT INTO series(id,name,lang,synopsis,note,created,updated) VALUES(?,?,?,?,?,?,?)",
+                   (sid, name, vals["lang"], vals["synopsis"], vals["note"], _now(), _now()))
+        return self.series(sid)
+
+    def delete_series(self, sid):
+        for t in ("terms", "relations", "episodes"):
+            self.x(f"DELETE FROM {t} WHERE series=?", (sid,))
+        self.x("DELETE FROM series WHERE id=?", (sid,))
+
+    def touch(self, sid):
+        self.x("UPDATE series SET updated=? WHERE id=?", (_now(), sid))
+
+    # ---- tên, thuật ngữ
+    def terms(self, sid):
+        return self.q("SELECT * FROM terms WHERE series=? ORDER BY ok DESC, hits DESC, id", (sid,))
+
+    def term(self, tid):
+        return self.q("SELECT * FROM terms WHERE id=?", (tid,), True)
+
+    def save_term(self, sid, d):
+        src, vi = (d.get("src") or "").strip(), (d.get("vi") or "").strip()
+        if not src:
+            raise ValueError("Thiếu nguyên văn")
+        kind = d.get("kind") if d.get("kind") in TERM_KINDS else "other"
+        tid = d.get("id")
+        args = (src, vi, kind, d.get("gender") or "", (d.get("note") or "").strip(), 1 if d.get("ok") else 0, _now())
+        if tid:
+            dup = self.q("SELECT id FROM terms WHERE series=? AND src=? AND id<>?", (sid, src, tid), True)
+            if dup:
+                raise ValueError(f"“{src}” đã có trong bộ nhớ")
+            self.x("UPDATE terms SET src=?, vi=?, kind=?, gender=?, note=?, ok=?, updated=? WHERE id=?", args + (tid,))
+        else:
+            old = self.q("SELECT id FROM terms WHERE series=? AND src=?", (sid, src), True)
+            if old:
+                tid = old["id"]
+                self.x("UPDATE terms SET src=?, vi=?, kind=?, gender=?, note=?, ok=?, updated=? WHERE id=?", args + (tid,))
+            else:
+                tid = self.x("INSERT INTO terms(src,vi,kind,gender,note,ok,updated,series,first_ep) VALUES(?,?,?,?,?,?,?,?,?)",
+                             args + (sid, str(d.get("first_ep") or "")))
+        self.touch(sid)
+        return self.term(tid)
+
+    def learn_term(self, sid, d, ep=""):
+        """AI đề xuất: chỉ thêm tên mới, không bao giờ đổi tên đã có (giữ đồng nhất giữa các tập)."""
+        src = (d.get("src") or "").strip()
+        vi = (d.get("vi") or "").strip()
+        if not src or not vi or len(src) > 40 or src == vi and CJK_RE.search(src):
+            return False
+        if self.q("SELECT id FROM terms WHERE series=? AND src=?", (sid, src), True):
+            return False
+        kind = d.get("kind") if d.get("kind") in TERM_KINDS else "other"
+        g = (d.get("gender") or "").lower()[:1]
+        self.x("INSERT INTO terms(series,src,vi,kind,gender,note,ok,hits,first_ep,updated) VALUES(?,?,?,?,?,?,0,0,?,?)",
+               (sid, src, vi, kind, g if g in ("m", "f") else "", (d.get("note") or "").strip()[:200], str(ep or ""), _now()))
+        return True
+
+    def delete_term(self, tid):
+        self.x("DELETE FROM terms WHERE id=?", (tid,))
+
+    def add_hits(self, counts):
+        with self.lock:
+            for tid, n in counts.items():
+                self.db().execute("UPDATE terms SET hits=hits+? WHERE id=?", (n, tid))
+            self.db().commit()
+
+    # ---- xưng hô
+    def relations(self, sid):
+        return self.q("SELECT * FROM relations WHERE series=? ORDER BY ok DESC, a, b", (sid,))
+
+    def save_relation(self, sid, d):
+        a, b = (d.get("a") or "").strip(), (d.get("b") or "").strip()
+        if not a or not b:
+            raise ValueError("Cần đủ hai nhân vật")
+        args = (a, b, (d.get("self_word") or "").strip(), (d.get("call_word") or "").strip(),
+                (d.get("note") or "").strip(), 1 if d.get("ok") else 0, _now())
+        rid = d.get("id")
+        if not rid:
+            old = self.q("SELECT id FROM relations WHERE series=? AND a=? AND b=?", (sid, a, b), True)
+            rid = old and old["id"]
+        if rid:
+            self.x("UPDATE relations SET a=?, b=?, self_word=?, call_word=?, note=?, ok=?, updated=? WHERE id=?", args + (rid,))
+        else:
+            rid = self.x("INSERT INTO relations(a,b,self_word,call_word,note,ok,updated,series) VALUES(?,?,?,?,?,?,?,?)",
+                         args + (sid,))
+        self.touch(sid)
+        return self.q("SELECT * FROM relations WHERE id=?", (rid,), True)
+
+    def learn_relation(self, sid, d):
+        a, b = (d.get("a") or "").strip(), (d.get("b") or "").strip()
+        sw, cw = (d.get("self") or d.get("self_word") or "").strip(), (d.get("call") or d.get("call_word") or "").strip()
+        if not a or not b or a == b or not (sw or cw):
+            return False
+        if self.q("SELECT id FROM relations WHERE series=? AND a=? AND b=?", (sid, a, b), True):
+            return False
+        self.x("INSERT INTO relations(series,a,b,self_word,call_word,note,ok,updated) VALUES(?,?,?,?,?,?,0,?)",
+               (sid, a[:60], b[:60], sw[:40], cw[:40], (d.get("note") or "").strip()[:200], _now()))
+        return True
+
+    def delete_relation(self, rid):
+        self.x("DELETE FROM relations WHERE id=?", (rid,))
+
+    # ---- các tập
+    def episodes(self, sid):
+        return self.q("SELECT * FROM episodes WHERE series=? ORDER BY ep IS NULL, ep, updated", (sid,))
+
+    def save_episode(self, sid, job, ep, name, summary):
+        old = self.q("SELECT id FROM episodes WHERE series=? AND job=?", (sid, job), True)
+        if old:
+            self.x("UPDATE episodes SET ep=?, name=?, summary=?, updated=? WHERE id=?", (ep, name, summary, _now(), old["id"]))
+        else:
+            self.x("INSERT INTO episodes(series,job,ep,name,summary,updated) VALUES(?,?,?,?,?,?)",
+                   (sid, job, ep, name, summary, _now()))
+        self.touch(sid)
+
+    def update_episode(self, eid, d):
+        old = self.q("SELECT * FROM episodes WHERE id=?", (eid,), True)
+        if not old:
+            raise KeyError("Không tìm thấy tập")
+        ep = d.get("ep", old["ep"])
+        try:
+            ep = float(ep) if ep not in (None, "") else None
+        except (TypeError, ValueError):
+            ep = old["ep"]
+        self.x("UPDATE episodes SET ep=?, name=?, summary=?, updated=? WHERE id=?",
+               (ep, d.get("name", old["name"]), d.get("summary", old["summary"]), _now(), eid))
+
+    def delete_episode(self, eid):
+        self.x("DELETE FROM episodes WHERE id=?", (eid,))
+
+    def memory(self, sid):
+        s = self.series(sid)
+        if not s:
+            raise KeyError("Không tìm thấy bộ phim trong bộ nhớ")
+        return {"series": s, "terms": self.terms(sid), "relations": self.relations(sid), "episodes": self.episodes(sid),
+                "kinds": TERM_KINDS}
+
+    def export(self, sid):
+        m = self.memory(sid)
+        strip = lambda rows, keys: [{k: r[k] for k in keys} for r in rows]
+        return {"app": "DichSub Agent Editor", "version": 1, "series": strip([m["series"]], ("name", "lang", "synopsis", "note"))[0],
+                "terms": strip(m["terms"], ("src", "vi", "kind", "gender", "note", "ok", "first_ep")),
+                "relations": strip(m["relations"], ("a", "b", "self_word", "call_word", "note", "ok")),
+                "episodes": strip(m["episodes"], ("ep", "name", "summary", "job"))}
+
+    def import_(self, data, sid=None):
+        if not isinstance(data, dict) or "terms" not in data:
+            raise ValueError("File không phải bộ nhớ của Agent Editor")
+        s = data.get("series") or {}
+        if sid:
+            cur = self.series(sid) or {}
+            if not cur.get("synopsis") and s.get("synopsis"):
+                self.save_series({"id": sid, "synopsis": s["synopsis"]})
+        else:
+            sid = (self.find_series(s.get("name") or "") or self.save_series(s))["id"]
+        n = 0
+        for t in data.get("terms") or []:
+            if not self.q("SELECT id FROM terms WHERE series=? AND src=?", (sid, (t.get("src") or "").strip()), True):
+                try:
+                    self.save_term(sid, t)
+                    n += 1
+                except ValueError:
+                    pass
+        for r in data.get("relations") or []:
+            try:
+                self.save_relation(sid, r)
+            except ValueError:
+                pass
+        for e in data.get("episodes") or []:
+            self.save_episode(sid, e.get("job") or ("import-" + uuid.uuid4().hex[:6]), e.get("ep"), e.get("name") or "",
+                              e.get("summary") or "")
+        return sid, n
+
+
+STORY = StoryDB(AGENT_DB_PATH)
+
+# ---------------------------------------------------------------- nhận tên phim, số tập từ tên file
+EP_PATTERNS = [
+    re.compile(r"第\s*([0-9０-９]{1,4})\s*[集话話回期]"),
+    re.compile(r"(?:^|[^a-z0-9])s\d{1,2}\s*[ ._-]?\s*e(?:p)?\s*(\d{1,4})(?!\d)", re.I),
+    re.compile(r"(?:^|[^a-z])(?:tập|tap|episode|ep|e)\s*[._-]?\s*(\d{1,4})(?!\d)", re.I),
+    re.compile(r"(?:^|[\s_.\-\[(])(\d{1,4})(?:[\s_.\-\])]|v\d|$)"),
+]
+NOISE_RE = re.compile(r"\b(?:\d{3,4}p|x26[45]|h\.?26[45]|hevc|web-?dl|webrip|bluray|hdtv|aac|ddp?5\.1|10bit|"
+                      r"vietsub|thuyết minh|zh|vi|en|ja|ko|chs|cht|sub|ocr|srt)\b", re.I)
+
+
+def guess_episode(name):
+    """'Dau Pha Thuong Khung - Tap 05.zh.srt' -> ('Dau Pha Thuong Khung', 5)."""
+    base = os.path.splitext(os.path.basename(name or ""))[0]
+    base = re.sub(r"(\.(?:zh|yue|ja|ko|en|vi|auto|ocr|vi-song-ngu))+$", "", base, flags=re.I)
+    base = re.sub(r"\[[^\]]*(?:sub|raw|fansub|1080|720)[^\]]*\]", " ", base, flags=re.I)
+    for k, rx in enumerate(EP_PATTERNS):
+        for m in rx.finditer(base):
+            num_txt = m.group(1).translate(str.maketrans("０１２３４５６７８９", "0123456789"))
+            n = int(num_txt)
+            if k == 3 and (n >= 1900 and n <= 2100 or n in (480, 576, 720, 1080, 2160)):
+                continue
+            title = base[:m.start()] if m.start() > 0 else base[m.end():]
+            return clean_series_name(title) or clean_series_name(base), n
+    return clean_series_name(base), None
+
+
+def clean_series_name(s):
+    s = NOISE_RE.sub(" ", s or "")
+    s = re.sub(r"[._\[\]()【】「」]+", " ", s)
+    s = re.sub(r"\s*[-–—:]+\s*$", "", s.strip())
+    s = re.sub(r"^\s*[-–—:]+\s*", "", s)
+    return re.sub(r"\s+", " ", s).strip(" -")
+
+
+def series_key(name):
+    import unicodedata
+    s = unicodedata.normalize("NFD", (name or "").lower())
+    s = "".join(c for c in s if unicodedata.category(c) != "Mn").replace("đ", "d")
+    return re.sub(r"[^0-9a-z㐀-鿿぀-ヿ가-힯]+", "", s)
+
+
+def parse_ep(v):
+    try:
+        return float(str(v).replace(",", ".")) if str(v).strip() else None
+    except ValueError:
+        return None
+
+
+def fmt_ep(ep):
+    if ep is None:
+        return ""
+    return str(int(ep)) if float(ep).is_integer() else str(ep)
+
+
+def link_job_series(job, sid=None, ep=None, auto=True):
+    """Gắn tài liệu vào một bộ phim trong bộ nhớ. sid='auto' (hoặc trống) -> tự nhận theo tên file."""
+    gname, gep = guess_episode(job.name)
+    if not sid or sid == "auto":
+        s = STORY.find_series(gname or job.name)
+        if not s:
+            if not auto:
+                return None
+            s = STORY.save_series({"name": gname or os.path.splitext(job.name)[0], "lang": job.lang})
+        sid = s["id"]
+    elif not STORY.series(sid):
+        raise KeyError("Không tìm thấy bộ phim trong bộ nhớ")
+    job.settings["series"] = sid
+    if ep is None:
+        ep = job.settings.get("ep") or (fmt_ep(gep) if gep is not None else "")
+    job.settings["ep"] = str(ep)
+    job.save_meta()
+    # từ điển riêng của tài liệu -> bộ nhớ chung (người dùng đã gõ nên coi là đã duyệt)
+    for a, b in parse_pairs(job.settings.get("glossary", "")):
+        if b and not STORY.q("SELECT id FROM terms WHERE series=? AND src=?", (sid, a), True):
+            STORY.save_term(sid, {"src": a, "vi": b, "ok": 1, "first_ep": job.settings["ep"]})
+    return sid
+
+
+# ---------------------------------------------------------------- AI Agent CLI trên máy
+CLI_AGENTS = {
+    "claude_cli": {"name": "Claude Code", "exe": "claude",
+                   "install": "Cài: npm install -g @anthropic-ai/claude-code, rồi gõ claude trong CMD một lần để đăng nhập."},
+    "codex_cli": {"name": "Codex", "exe": "codex",
+                  "install": "Cài: npm install -g @openai/codex, rồi gõ codex login để đăng nhập tài khoản ChatGPT."},
+    "agy_cli": {"name": "Antigravity", "exe": "agy",
+                "install": "Cài trong PowerShell: irm https://antigravity.google/cli/install.ps1 | iex, rồi gõ agy một lần để đăng nhập."},
+}
+
+
+def find_cli(kind, custom=""):
+    custom = (custom or "").strip().strip('"')
+    if custom:
+        return custom if os.path.isfile(custom) else None
+    exe = CLI_AGENTS[kind]["exe"]
+    p = shutil.which(exe)
+    if p:
+        return p
+    cands = []
+    if IS_WIN:
+        ap, la, up = os.environ.get("APPDATA", ""), os.environ.get("LOCALAPPDATA", ""), HOME
+        for e in (exe + ".cmd", exe + ".exe", exe + ".ps1"):
+            cands += [os.path.join(ap, "npm", e), os.path.join(up, ".local", "bin", e),
+                      os.path.join(la, "Programs", exe, e), os.path.join(la, exe, e),
+                      os.path.join(la, "Programs", "Antigravity", "bin", e), os.path.join(up, ".claude", "local", e)]
+    else:
+        cands += [os.path.join(HOME, ".local", "bin", exe), os.path.join(HOME, ".npm-global", "bin", exe),
+                  "/usr/local/bin/" + exe, "/opt/homebrew/bin/" + exe, os.path.join(HOME, ".claude", "local", exe)]
+    for c in cands:
+        if c and os.path.isfile(c) and not c.endswith(".ps1"):
+            return c
+    return None
+
+
+def _popen_kw():
+    kw = {"stdin": subprocess.PIPE, "stdout": subprocess.PIPE, "stderr": subprocess.PIPE, "env": _clean_env()}
+    if IS_WIN:
+        kw["creationflags"] = 0x08000000   # CREATE_NO_WINDOW
+    return kw
+
+
+def cli_check(kind, custom=""):
+    exe = find_cli(kind, custom)
+    info = CLI_AGENTS[kind]
+    if not exe:
+        return {"found": False, "hint": f"Không tìm thấy {info['name']} trên máy. {info['install']}"}
+    try:
+        kw = _popen_kw()
+        kw.pop("stdin")
+        r = subprocess.run([exe, "--version"], capture_output=True, timeout=40, **{k: v for k, v in kw.items() if k not in ("stdout", "stderr")})
+        ver = (r.stdout or r.stderr or b"").decode("utf-8", "replace").strip().splitlines()
+        return {"found": True, "path": exe, "version": (ver[0] if ver else "")[:120]}
+    except Exception as e:
+        return {"found": True, "path": exe, "version": "", "hint": f"Không chạy được {exe}: {e}"}
+
+
+class CliChat:
+    """Gửi prompt cho Claude Code / Codex / Antigravity (chế độ không giao diện) và lấy câu trả lời."""
+
+    def __init__(self, kind, path, model, stop, post, timeout=900):
+        self.kind, self.model, self.stop, self.post = kind, (model or "").strip(), stop, post
+        self.timeout = timeout
+        self.name = CLI_AGENTS[kind]["name"]
+        self.exe = find_cli(kind, path)
+        if not self.exe:
+            raise FatalError(f"Không tìm thấy {self.name} trên máy.\n{CLI_AGENTS[kind]['install']}\n"
+                             "Nếu đã cài ở chỗ khác, điền đường dẫn file chạy trong mục Dịch vụ dịch.")
+        self.work = os.path.join(DATA_DIR, "agent_work")
+        os.makedirs(self.work, exist_ok=True)
+
+    @staticmethod
+    def flatten(messages):
+        parts = []
+        for m in messages:
+            if m["role"] == "system":
+                parts.append("# INSTRUCTIONS\n" + m["content"])
+            else:
+                parts.append(("# TASK\n" if m["role"] == "user" else "# PREVIOUS ANSWER\n") + m["content"])
+        parts.append("Reply with the requested output only. Do not use tools, do not read or write files.")
+        return "\n\n".join(parts)
+
+    def _cmd(self, outfile):
+        m = self.model
+        if self.kind == "claude_cli":
+            return [self.exe, "-p", "--output-format", "text"] + (["--model", m] if m else [])
+        if self.kind == "codex_cli":
+            return [self.exe, "exec", "--skip-git-repo-check", "--color", "never", "-o", outfile] + \
+                   (["-m", m] if m else []) + ["-"]
+        return [self.exe, "--input-format", "stream-json", "--output-format", "stream-json"] + (["--model", m] if m else [])
+
+    def chat(self, messages):
+        prompt = self.flatten(messages)
+        outfile = os.path.join(self.work, f"out-{uuid.uuid4().hex[:8]}.txt")
+        data = prompt if self.kind != "agy_cli" else json.dumps({"event": "user", "message": {"content": prompt}},
+                                                                 ensure_ascii=False) + "\n"
+        for attempt in range(3):
+            if self.stop.is_set():
+                raise Stopped()
+            try:
+                p = subprocess.Popen(self._cmd(outfile), cwd=self.work, **_popen_kw())
+            except OSError as e:
+                raise FatalError(f"Không chạy được {self.name}: {e}")
+            out, err = [], []
+
+            def rd(stream, buf):
+                for line in iter(stream.readline, b""):
+                    buf.append(line)
+            ts = [threading.Thread(target=rd, args=(p.stdout, out), daemon=True),
+                  threading.Thread(target=rd, args=(p.stderr, err), daemon=True)]
+            for t in ts:
+                t.start()
+            try:
+                p.stdin.write(data.encode("utf-8"))
+                p.stdin.close()
+            except OSError:
+                pass
+            t0, result = time.time(), None
+            while p.poll() is None:
+                if self.stop.is_set():
+                    p.kill()
+                    raise Stopped()
+                if self.kind == "agy_cli":
+                    result = _agy_result(out)
+                    if result is not None:
+                        p.kill()
+                        break
+                if time.time() - t0 > self.timeout:
+                    p.kill()
+                    raise FatalError(f"{self.name} không trả lời sau {self.timeout // 60} phút.")
+                time.sleep(0.2)
+            for t in ts:
+                t.join(2)
+            stdout = b"".join(out).decode("utf-8", "replace")
+            stderr = b"".join(err).decode("utf-8", "replace").strip()
+            if self.kind == "agy_cli":
+                result = result if result is not None else _agy_result(out)
+                text = result
+            elif self.kind == "codex_cli" and os.path.isfile(outfile):
+                with open(outfile, encoding="utf-8", errors="replace") as f:
+                    text = f.read()
+                os.remove(outfile)
+            else:
+                text = stdout if p.returncode == 0 else None
+            if text and text.strip():
+                return THINK_RE.sub("", text)
+            msg = (stderr or stdout)[-600:]
+            low = msg.lower()
+            if any(k in low for k in ("login", "log in", "logged in", "authenticat", "unauthorized", "api key", "/login")):
+                raise FatalError(f"{self.name} chưa đăng nhập. Mở CMD, gõ {CLI_AGENTS[self.kind]['exe']} để đăng nhập rồi dịch lại.\n{msg}")
+            if any(k in low for k in ("rate limit", "usage limit", "quota", "429", "limit reached", "overloaded")):
+                wait = 60 * (attempt + 1)
+                self.post("log", f"{self.name} báo hết lượt hoặc quá tải, chờ {wait}s rồi thử lại...")
+                self._wait(wait)
+                continue
+            if attempt >= 1:
+                raise FatalError(f"{self.name} báo lỗi (mã {p.returncode}).\n{msg}")
+            self.post("log", f"{self.name} chưa trả lời được, thử lại... {msg[:200]}")
+            self._wait(5)
+        raise FatalError(f"{self.name} không trả lời được.")
+
+    def _wait(self, sec):
+        end = time.time() + sec
+        while time.time() < end:
+            if self.stop.is_set():
+                raise Stopped()
+            time.sleep(0.2)
+
+
+def _agy_result(lines):
+    for raw in list(lines):
+        try:
+            ev = json.loads(raw.decode("utf-8", "replace"))
+        except ValueError:
+            continue
+        if ev.get("event") == "result":
+            r = ev.get("result") or {}
+            if r.get("status") not in (None, "SUCCESS") and not r.get("response"):
+                raise FatalError("Antigravity báo lỗi: " + json.dumps(r, ensure_ascii=False)[:400])
+            return r.get("response") or ""
+    return None
+
+
+# ---------------------------------------------------------------- kiểm tra lỗi tự động (không tốn AI)
+FOREIGN_RE = re.compile(r"[㐀-鿿぀-ヿ가-힯]")
+
+
+def _norm_cmp(s):
+    return re.sub(r"\s+", " ", plain_text(s or "")).strip().lower()
+
+
+def plain_text(s):
+    return re.sub(r"\{[^}]*\}|<[^>]+>", "", s or "")
+
+
+def _term_in(src_text, term_src):
+    if CJK_RE.search(term_src) or KANA_RE.search(term_src) or HANGUL_RE.search(term_src):
+        return term_src in src_text
+    return re.search(r"(?<![\w])" + re.escape(term_src) + r"(?![\w])", src_text, re.I) is not None
+
+
+def qa_check(segs, idxs, terms, tgt="vi", sub=True):
+    """Trả về {chỉ số: [vấn đề]} cho các dòng đã dịch."""
+    issues, hits = {}, {}
+    for i in idxs:
+        s = segs[i]
+        if s.vi is None or not s.src.strip():
+            continue
+        src, vi = plain_text(s.src), plain_text(s.vi)
+        out = []
+        if not vi.strip():
+            out.append("Bản dịch trống")
+        elif tgt == "vi" and FOREIGN_RE.search(vi) and FOREIGN_RE.search(src):
+            out.append("Còn chữ nước ngoài chưa dịch")
+        elif tgt == "vi" and LATIN_RE.search(src) and not FOREIGN_RE.search(src) and len(src.strip()) > 15 \
+                and _norm_cmp(src) == _norm_cmp(vi):
+            out.append("Có thể chưa dịch (giống hệt câu gốc)")
+        nv = _norm_cmp(vi)
+        for t in terms:
+            if t["vi"] and _term_in(src, t["src"]):
+                hits[t["id"]] = hits.get(t["id"], 0) + 1
+                if _norm_cmp(t["vi"]) not in nv:
+                    out.append(f"Tên “{t['src']}” phải dịch là “{t['vi']}”")
+        if sub and s.time:
+            a, b = sub_times(s.time)
+            if a is not None and b is not None and b > a:
+                n = len(re.sub(r"\s+", "", vi))
+                if n > 12 and n / (b - a) > 24:
+                    out.append(f"Câu dài so với thời gian hiện ({b - a:.1f} giây)")
+        if out:
+            issues[i] = out[:4]
+    return issues, hits
+
+
+# ---------------------------------------------------------------- prompt của Agent
+def relevant_terms(terms, text):
+    return [t for t in terms if t["vi"] and _term_in(text, t["src"])]
+
+
+def bible_block(mem, text, tgt="vi", max_eps=3, kind="sub"):
+    """Phần 'sổ tay bộ phim' gắn vào prompt: chỉ những gì liên quan tới đoạn đang dịch."""
+    s = mem["series"]
+    unit = "episode" if kind == "sub" else "volume/part"
+    out = [f'SERIES BIBLE of "{s["name"]}"' + (f" — current {unit}: {mem['ep']}" if mem.get("ep") else "") +
+           ". The whole team follows it so every episode is consistent."]
+    if (s.get("synopsis") or "").strip():
+        out.append("Story so far: " + s["synopsis"].strip()[:1500])
+    if (s.get("note") or "").strip():
+        out.append("Notes from the editor: " + s["note"].strip()[:800])
+    prev = mem.get("prev") or []
+    if prev:
+        out.append("Previous episodes:\n" + "\n".join(
+            f"- {('Ep ' + fmt_ep(e['ep'])) if e.get('ep') is not None else e.get('name', '')}: {e['summary'].strip()[:600]}"
+            for e in prev[-max_eps:] if (e.get("summary") or "").strip()))
+    rel = relevant_terms(mem["terms"], text)
+    chars = [t for t in rel if t["kind"] == "char"]
+    if chars:
+        out.append("Characters in these lines (use exactly these names):\n" + "\n".join(
+            f"- {t['src']} → {t['vi']}" + (f" ({', '.join(x for x in (GENDER_EN.get(t['gender'], ''), t['note']) if x)})"
+                                           if (t['gender'] or t['note']) else "") for t in chars[:60]))
+    names = {t["vi"] for t in chars} | {t["src"] for t in chars}
+    rels = [r for r in mem["relations"] if r["a"] in names or r["b"] in names or r["a"] in text or r["b"] in text]
+    if rels:
+        out.append("Forms of address (speaker → listener: how the speaker refers to self / to the listener). Keep them:\n" +
+                   "\n".join(f"- {r['a']} → {r['b']}: self “{r['self_word'] or '-'}”, calls them “{r['call_word'] or '-'}”"
+                             + (f" ({r['note']})" if r["note"] else "") for r in rels[:30]))
+    return "\n\n".join(out), rel
+
+
+ANALYZE_SYS = """You are the story editor of a professional {kindname} translation team ({sname} → {tname}). Before translating, you read the source and extend the SERIES BIBLE so names and terms stay identical across all episodes.
+
+Return ONLY a JSON object, no markdown fences, no comments:
+{{"terms":[{{"src":"original term exactly as written","vi":"{tname} rendering","kind":"char|place|org|realm|skill|item|title|other","gender":"m|f|","note":"very short note in Vietnamese (role, who they are)"}}],
+ "relations":[{{"a":"speaker name in {tname}","b":"listener name in {tname}","self":"word the speaker uses for himself/herself","call":"word the speaker uses for the listener","note":""}}]}}
+
+Rules:
+- terms: ONLY proper names and special terms worth keeping consistent: people, nicknames, places, sects/organizations, cultivation realms/levels, techniques, artifacts, titles. Never common words.
+- {names}
+- Do NOT repeat terms that are already in the bible list given to you.
+- relations: only when the text makes the relationship clear (family, master/disciple, lovers, enemies, rank). Choose natural {tname} pronouns{pron}.
+- If nothing new, return {{"terms":[],"relations":[]}}."""
+
+REVIEW_SYS = """You are the chief editor of a professional {kindname} translation team ({sname} → {tname}). Check the draft translation line by line against the source and the SERIES BIBLE, and fix only what is wrong:
+- mistranslations, missing or added meaning, lines left untranslated or empty;
+- names and terms that differ from the bible (they MUST match exactly);
+- forms of address and pronouns that are inconsistent with the characters' relationship;
+- unnatural, word-for-word wording{extra}.
+
+Output format: one line per line that needs a fix:
+[N] corrected translation ||| short reason in Vietnamese
+Keep "<br>" line breaks and formatting tags like <i>, {{\\an8}}. Do not output lines that are already good. If every line is fine, output exactly: OK"""
+
+SUMMARY_SYS = """You keep the SERIES BIBLE of a {kindname} translation team. Write in Vietnamese. Return ONLY a JSON object:
+{{"summary":"what happens in this {unit}: 4-8 sentences, main events, who appears, relationships and reveals, important names",
+ "synopsis":"the updated overall story so far, at most 10 sentences, combining the old story with this {unit}"}}"""
+
+
+def _json_obj(text):
+    text = THINK_RE.sub("", text or "")
+    text = re.sub(r"^```(?:json)?|```$", "", text.strip(), flags=re.M)
+    a, b = text.find("{"), text.rfind("}")
+    if a < 0 or b <= a:
+        raise ValueError("AI không trả về JSON")
+    raw = text[a:b + 1]
+    try:
+        return json.loads(raw)
+    except ValueError:
+        return json.loads(re.sub(r",\s*([}\]])", r"\1", raw))
+
+
+REVIEW_LINE_RE = re.compile(r"^\s*\**\s*\[(\d+)\]\s*\**\s?(.*)$")
+
+
+def parse_review(resp, valid):
+    out = {}
+    for raw in THINK_RE.sub("", resp or "").split("\n"):
+        m = REVIEW_LINE_RE.match(raw.strip().strip("`"))
+        if not m or int(m.group(1)) not in valid:
+            continue
+        body = m.group(2)
+        why = ""
+        if "|||" in body:
+            body, why = body.split("|||", 1)
+        body = body.strip()
+        if body:
+            out[int(m.group(1))] = (body, why.strip()[:200])
+    return out
+
+
+class AgentEngine(BookLLMEngine):
+    """Agent Editor: đọc hiểu -> dịch có ngữ cảnh (sổ tay bộ phim) -> tự kiểm tra -> hiệu đính -> ghi nhớ tập."""
+
+    def __init__(self, *a, job=None, opts=None, backend=None, **kw):
+        super().__init__(*a, **kw)
+        self.job = job
+        self.opts = dict(opts or {})
+        self.backend = backend
+        self.offset = 0
+        self.only = None          # None = đủ các bước | "review" | "analyze" | "summary"
+        self.mem = None
+
+    def chat(self, messages):
+        if self.backend is not None:
+            return self.backend.chat(messages)
+        return super().chat(messages)
+
+    # ---- bộ nhớ
+    def load_memory(self):
+        st = self.job.settings
+        sid = st.get("series")
+        if not sid or not STORY.series(sid):
+            sid = link_job_series(self.job, None)
+        s = STORY.series(sid)
+        ep = parse_ep(st.get("ep"))
+        eps = [e for e in STORY.episodes(sid) if e["job"] != self.job.id]
+        if ep is not None:
+            eps = [e for e in eps if e["ep"] is None or e["ep"] < ep]
+        self.mem = {"series": s, "sid": sid, "ep": st.get("ep") or "", "prev": eps,
+                    "terms": STORY.terms(sid), "relations": STORY.relations(sid)}
+        return self.mem
+
+    def _kindname(self):
+        return "film subtitle" if self.sub else "novel"
+
+    def _langs(self):
+        return LANG_NAMES.get(self.src, "the source language"), LANG_NAMES.get(self.tgt, "Vietnamese")
+
+    # ---- các bước
+    def run(self, segs):
+        self.cues = segs
+        a = self.offset
+        self.load_memory()
+        s = self.mem["series"]
+        self.post("log", f"Agent Editor: bộ “{s['name']}”" + (f", tập {self.mem['ep']}" if self.mem["ep"] else "") +
+                  f" — nhớ {len(self.mem['terms'])} tên/thuật ngữ, {len(self.mem['relations'])} cách xưng hô, "
+                  f"{len(self.mem['prev'])} tập trước.")
+        ag = self.job.agent
+        if self.only in (None, "analyze") and (self.only == "analyze" or self.opts.get("analyze", True)):
+            if self.only == "analyze" or not ag.get("analyzed"):
+                self.analyze(segs)
+                ag["analyzed"] = True
+        if self.only is None:
+            if prepare_todo(segs):
+                self.post("log", "Agent: dịch có ngữ cảnh (dòng trước, dòng sau, sổ tay bộ phim)...")
+                super().run(segs)
+            self.mem["terms"] = STORY.terms(self.mem["sid"])
+        if self.only in (None, "review"):
+            self.check(segs)
+            if self.only == "review" or self.opts.get("review", True):
+                force = self.only == "review"
+                todo = [i for i in range(len(segs)) if segs[i].vi is not None and segs[i].src.strip()
+                        and (force or (i + a) not in ag["reviewed"])]
+                if todo:
+                    self.review(segs, todo)
+                self.check(segs)
+        if self.only in (None, "summary") and (self.only == "summary" or self.opts.get("summary", True)):
+            if remaining_count(self.job.book.segs) == 0:
+                self.summarize()
+
+    def analyze(self, segs):
+        sname, tname = self._langs()
+        idxs = [i for i, s in enumerate(segs) if s.src.strip()]
+        chunks, cur, n = [], [], 0
+        lim = max(3000, min(9000, self.max_chars * 3))
+        for i in idxs:
+            L = len(segs[i].src)
+            if cur and n + L > lim:
+                chunks.append(cur)
+                cur, n = [], 0
+            cur.append(i)
+            n += L
+        if cur:
+            chunks.append(cur)
+        if self.src.startswith("zh") and self.tgt == "vi":
+            names = "Chinese names → Sino-Vietnamese (Hán Việt) readings, e.g. 萧炎 → Tiêu Viêm, 筑基 → Trúc Cơ."
+        elif self.tgt == "vi":
+            names = ("Keep Western/Japanese/Korean personal names as they are written in the source (romanized), "
+                     "translate titles, sects, techniques and realms into natural Vietnamese.")
+        else:
+            names = f"Use the established {tname} forms."
+        pron = " (ta/ngươi, huynh/đệ, sư phụ/đồ nhi, anh/em, tôi/cậu, mày/tao...)" if self.tgt == "vi" else ""
+        sys_p = ANALYZE_SYS.format(kindname=self._kindname(), sname=sname, tname=tname, names=names, pron=pron)
+        new_t = new_r = 0
+        self.post("log", f"Agent: đọc hiểu {len(idxs)} {self.unit} ({len(chunks)} phần) để học tên nhân vật, thuật ngữ...")
+        for k, ch in enumerate(chunks):
+            if self.stop.is_set():
+                raise Stopped()
+            text = "\n".join(plain_text(segs[i].src).replace("\n", " ") for i in ch)
+            known = relevant_terms(STORY.terms(self.mem["sid"]), text)
+            user = []
+            if self.note.strip():
+                user.append("About this work: " + self.note.strip())
+            if self.mem["series"].get("synopsis"):
+                user.append("Story so far: " + self.mem["series"]["synopsis"][:1200])
+            user.append("Already in the bible (do not repeat):\n" +
+                        ("\n".join(f"{t['src']} → {t['vi']}" for t in known[:150]) or "(none)"))
+            user.append(f"Source text (part {k + 1}/{len(chunks)}):\n" + text)
+            try:
+                d = _json_obj(self.chat([{"role": "system", "content": sys_p}, {"role": "user", "content": "\n\n".join(user)}]))
+            except (Stopped, FatalError):
+                raise
+            except Exception as e:
+                self.post("log", f"Agent: phần {k + 1} đọc hiểu lỗi ({e}), bỏ qua.")
+                continue
+            for t in d.get("terms") or []:
+                if isinstance(t, dict) and t.get("src") and _term_in(text, str(t["src"]).strip()):
+                    new_t += STORY.learn_term(self.mem["sid"], t, self.mem["ep"])
+            for r in d.get("relations") or []:
+                if isinstance(r, dict):
+                    new_r += STORY.learn_relation(self.mem["sid"], r)
+        self.mem["terms"] = STORY.terms(self.mem["sid"])
+        self.mem["relations"] = STORY.relations(self.mem["sid"])
+        self.post("log", f"Agent: học thêm {new_t} tên/thuật ngữ, {new_r} cách xưng hô. Bộ nhớ hiện có "
+                         f"{len(self.mem['terms'])} tên/thuật ngữ.")
+        self.post("memory", None)
+
+    def _messages(self, idxs):
+        text = "\n".join(self.cues[i].src for i in idxs)
+        lo, hi = max(0, idxs[0] - 6), min(len(self.cues), idxs[-1] + 5)
+        around = "\n".join(self.cues[j].src for j in range(lo, hi))
+        bible, rel = bible_block(self.mem, around, self.tgt, kind="sub" if self.sub else "book")
+        gl, seen = [], set()
+        for t in rel:
+            gl.append((t["src"], t["vi"]))
+            seen.add(t["src"])
+        gl += [(a, b) for a, b in self.glossary if a in text and a not in seen]
+        if self.sub:
+            sys_p = sub_system_prompt(self.src, self.tgt, self.style, gl[:200])
+            user = sub_user_prompt(self.cues, idxs, self.note, self.tgt, context_n=6)
+        else:
+            sys_p = book_system_prompt(self.src, self.tgt, self.style, gl[:200])
+            user = book_user_prompt(self.cues, idxs, self.note, self.tgt, context_n=3)
+        nxt = [j for j in range(idxs[-1] + 1, min(len(self.cues), idxs[-1] + (5 if self.sub else 2))) if self.cues[j].src.strip()]
+        if nxt:
+            user += ("\n\nNext lines, for context only (do NOT translate or output them):\n" +
+                     "\n".join(to_wire(self.cues[j].src) for j in nxt))
+        return [{"role": "system", "content": sys_p + "\n\n" + bible}, {"role": "user", "content": user}]
+
+    def check(self, segs):
+        a = self.offset
+        issues, hits = qa_check(segs, range(len(segs)), self.mem["terms"], self.tgt, self.sub)
+        ag = self.job.agent
+        ign = set(ag["ignored"])
+        for i in range(len(segs)):
+            ag["issues"].pop(i + a, None)
+        for i, v in issues.items():
+            if i + a not in ign:
+                ag["issues"][i + a] = v
+        if self.only is None and hits:
+            STORY.add_hits(hits)
+        n = sum(1 for i in range(len(segs)) if i + a in ag["issues"])
+        self.post("agent", None)
+        return n
+
+    def review(self, segs, todo):
+        a, ag = self.offset, self.job.agent
+        sname, tname = self._langs()
+        extra = "; lines too long to read in time (shorten them)" if self.sub else ""
+        sys_p = REVIEW_SYS.format(kindname=self._kindname(), sname=sname, tname=tname, extra=extra)
+        batches, cur, n = [], [], 0
+        lim = max(1500, self.max_chars)
+        size = max(10, min(60, self.batch_size))
+        for i in todo:
+            L = len(segs[i].src) + len(segs[i].vi or "")
+            if cur and (n + L > lim * 1.6 or len(cur) >= size):
+                batches.append(cur)
+                cur, n = [], 0
+            cur.append(i)
+            n += L
+        if cur:
+            batches.append(cur)
+        self.post("log", f"Agent: thẩm định và hiệu đính {len(todo)} {self.unit} ({len(batches)} lượt)...")
+        fixed = 0
+        for b in batches:
+            if self.stop.is_set():
+                raise Stopped()
+            text = "\n".join(segs[i].src for i in b)
+            bible, rel = bible_block(self.mem, text, self.tgt, kind="sub" if self.sub else "book")
+            gl = "\n".join(f"{t['src']} → {t['vi']}" for t in rel)
+            probs = [f"[{i + 1}] " + "; ".join(ag["issues"][i + a]) for i in b if i + a in ag["issues"]]
+            user = []
+            if self.note.strip():
+                user.append("About this work: " + self.note.strip())
+            user.append(bible)
+            if gl:
+                user.append("Names and terms in these lines (MUST match):\n" + gl)
+            if probs:
+                user.append("Problems found by automatic checks (fix them):\n" + "\n".join(probs))
+            prev = [j for j in range(max(0, b[0] - 3), b[0]) if segs[j].vi]
+            if prev:
+                user.append("Previous lines (context only):\n" + "\n".join(f"{to_wire(segs[j].src)} => {to_wire(segs[j].vi)}" for j in prev))
+            user.append("Draft to review:\n" + "\n".join(f"[{i + 1}] {to_wire(segs[i].src)}\n    => {to_wire(segs[i].vi)}" for i in b))
+            try:
+                res = parse_review(self.chat([{"role": "system", "content": sys_p},
+                                              {"role": "user", "content": "\n\n".join(user)}]), {i + 1 for i in b})
+            except (Stopped, FatalError):
+                raise
+            except Exception as e:
+                self.post("log", f"Agent: lượt hiệu đính {b[0] + 1}-{b[-1] + 1} lỗi ({e}), bỏ qua.")
+                continue
+            for i in b:
+                ag["reviewed"].add(i + a)
+                if i + 1 not in res:
+                    continue
+                new, why = res[i + 1]
+                new = from_wire(new)
+                old = segs[i].vi or ""
+                if _norm_cmp(new) == _norm_cmp(old) or not new.strip():
+                    continue
+                prev_edit = ag["edits"].get(i + a)
+                ag["edits"][i + a] = {"old": prev_edit["old"] if prev_edit else old, "new": new, "why": why or "Hiệu đính"}
+                segs[i].vi = new
+                self.post("cue", i)
+                fixed += 1
+        self.post("log", f"Agent: đã hiệu đính {fixed} {self.unit}.")
+
+    def summarize(self):
+        segs = self.job.book.segs
+        lines = [plain_text(s.vi).replace("\n", " ") for s in segs if s.vi and s.src.strip()]
+        if not lines:
+            return
+        text = "\n".join(lines)
+        if len(text) > 14000:
+            step = len(lines) / (14000 / max(1, len(text) / len(lines)))
+            text = "\n".join(lines[int(k * step)] for k in range(int(len(lines) / step)))
+        unit = "episode" if self.sub else "part"
+        s = self.mem["series"]
+        user = (f'Series: "{s["name"]}"' + (f", {unit} {self.mem['ep']}" if self.mem["ep"] else "") +
+                f"\n\nOld story so far: {s.get('synopsis') or '(empty)'}\n\nTranslated text of this {unit}:\n{text}")
+        try:
+            d = _json_obj(self.chat([{"role": "system", "content": SUMMARY_SYS.format(kindname=self._kindname(), unit=unit)},
+                                     {"role": "user", "content": user}]))
+        except (Stopped, FatalError):
+            raise
+        except Exception as e:
+            self.post("log", f"Agent: không tóm tắt được tập ({e}).")
+            return
+        summ = str(d.get("summary") or "").strip()
+        if summ:
+            STORY.save_episode(self.mem["sid"], self.job.id, parse_ep(self.mem["ep"]), self.job.name, summ)
+        syn = str(d.get("synopsis") or "").strip()
+        if syn:
+            STORY.save_series({"id": self.mem["sid"], "synopsis": syn})
+        self.post("log", "Agent: đã ghi nhớ tóm tắt tập vào bộ nhớ cốt truyện.")
+        self.post("memory", None)
+
+
+def agent_supported(svc):
+    return svc not in ("gtx", "edge", "hachimi")
+
+
+def apply_term_rename(sid, old_vi, new_vi, src=None):
+    """Đổi tên đã dịch trên mọi tài liệu của bộ phim (vd. 'Tiêu Diễm' -> 'Tiêu Viêm')."""
+    if not old_vi or not new_vi or old_vi == new_vi:
+        return 0
+    n = 0
+    with STATE.lock:
+        for job in STATE.jobs.values():
+            if job.settings.get("series") != sid:
+                continue
+            for k, s in enumerate(job.book.segs):
+                if s.vi and old_vi in s.vi and (src is None or _term_in(plain_text(s.src), src)):
+                    s.vi = s.vi.replace(old_vi, new_vi)
+                    job.events.append(k)
+                    job.dirty = True
+                    n += 1
+    return n
+
+
+def agent_view(job, i):
+    ag = job.agent
+    return ag["issues"].get(i), ag["edits"].get(i)
+
+
+def timeline_data(job):
+    segs, ag = job.book.segs, job.agent
+    out, dur = [], 0.0
+    for k, s in enumerate(segs):
+        a, b = sub_times(s.time) if s.time else (None, None)
+        if a is None:
+            continue
+        b = b if b and b > a else a + 1
+        dur = max(dur, b)
+        st = 0 if s.vi is None else (2 if k in ag["issues"] else (3 if k in ag["edits"] else 1))
+        out.append([k, round(a, 2), round(b, 2), st])
+    return {"dur": dur, "cues": out}
+
+
+class CliBookEngine(BookLLMEngine):
+    """Dịch thường (không Agent) bằng Claude Code / Codex / Antigravity."""
+
+    def __init__(self, *a, backend=None, **kw):
+        super().__init__(*a, **kw)
+        self.backend = backend
+
+    def chat(self, messages):
+        return self.backend.chat(messages)
 
 
 STATE = None
@@ -4661,7 +5710,8 @@ class Handler(BaseHTTPRequestHandler):
                             res["reload"] = True
                         else:
                             a, b = int(q.get("a", 0)), int(q.get("b", 0))
-                            res["updates"] = [[i, job.book.segs[i].vi] for i in sorted(set(evs)) if a <= i < b]
+                            res["updates"] = [[i, job.book.segs[i].vi, job.agent["issues"].get(i), job.agent["edits"].get(i)]
+                                              for i in sorted(set(evs)) if a <= i < b]
                         res["evTotal"] = len(job.events)
                         if evs or q.get("full"):
                             res["chProgress"] = job.chapter_progress()
@@ -4733,6 +5783,32 @@ class Handler(BaseHTTPRequestHandler):
                     re.sub(r"[^\x20-\x7e]", "_", name).replace('"', ""), urllib.parse.quote(name))
                 return self._send(200, "\ufeff" + cues_to_srt(j.cues).replace("\n", "\r\n"),
                                   "application/x-subrip; charset=utf-8", {"Content-Disposition": disp})
+            if u.path == "/api/agent/series":
+                return self._send(200, {"series": STORY.series_list(), "kinds": TERM_KINDS})
+            if u.path == "/api/agent/memory":
+                m = STORY.memory(q.get("series", ""))
+                with STATE.lock:
+                    m["docs"] = [{"id": j.id, "name": j.name, "ep": j.settings.get("ep", "")}
+                                 for j in STATE.jobs.values() if j.settings.get("series") == m["series"]["id"]]
+                return self._send(200, m)
+            if u.path == "/api/agent/export":
+                data = STORY.export(q.get("series", ""))
+                name = (clean_series_name(data["series"]["name"]) or "bo-nho") + ".agent-memory.json"
+                disp = "attachment; filename=\"%s\"; filename*=UTF-8''%s" % (
+                    re.sub(r"[^\x20-\x7e]", "_", name).replace('"', ""), urllib.parse.quote(name))
+                return self._send(200, json.dumps(data, ensure_ascii=False, indent=1), "application/json; charset=utf-8",
+                                  {"Content-Disposition": disp})
+            if u.path == "/api/agent/guess":
+                job = self._job(q.get("id", ""))
+                name, ep = guess_episode(job.name)
+                found = STORY.find_series(name) if name else None
+                return self._send(200, {"name": name, "ep": fmt_ep(ep), "found": found and found["id"]})
+            if u.path == "/api/agent/cli":
+                return self._send(200, cli_check(q.get("kind", ""), q.get("path", "")))
+            if u.path == "/api/timeline":
+                job = self._job(q.get("id", ""))
+                with STATE.lock:
+                    return self._send(200, timeline_data(job))
             if u.path == "/api/hachimi":
                 return self._send(200, hachimi_status())
             if u.path == "/api/book":
@@ -4748,7 +5824,9 @@ class Handler(BaseHTTPRequestHandler):
                 job = self._job(q.get("id", ""))
                 c = job.book.chapters[int(q.get("ch", 0))]
                 with STATE.lock:
-                    segs = [[s.src, s.vi, s.kind, s.time] for s in job.book.segs[c["start"]:c["end"]]]
+                    ag = job.agent
+                    segs = [[s.src, s.vi, s.kind, s.time, ag["issues"].get(k), ag["edits"].get(k)]
+                            for k, s in enumerate(job.book.segs[c["start"]:c["end"]], c["start"])]
                 return self._send(200, {"start": c["start"], "end": c["end"], "segs": segs})
             if u.path == "/api/download":
                 job = self._job(q.get("id", ""))
@@ -4765,6 +5843,98 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as e:
             log_file(f"GET {u.path} lỗi: {e!r}")
             return self._send(400, {"error": str(e)})
+
+    def _agent_post(self, act, d):
+        """Agent Editor: bộ nhớ cốt truyện và các thao tác trên tài liệu."""
+        if act == "series/save":
+            return self._send(200, STORY.save_series(d))
+        if act == "series/delete":
+            sid = d.get("id", "")
+            STORY.delete_series(sid)
+            with STATE.lock:
+                for j in STATE.jobs.values():
+                    if j.settings.get("series") == sid:
+                        j.settings["series"] = ""
+                        j.save_meta()
+            return self._send(200, {"ok": True})
+        if act == "term/save":
+            sid = d.get("series", "")
+            old = STORY.term(d["id"]) if d.get("id") else None
+            t = STORY.save_term(sid, d)
+            n = 0
+            if d.get("apply") and old and old["vi"] and old["vi"] != t["vi"]:
+                n = apply_term_rename(sid, old["vi"], t["vi"], t["src"])
+            return self._send(200, {"term": t, "replaced": n})
+        if act == "term/delete":
+            STORY.delete_term(int(d["id"]))
+            return self._send(200, {"ok": True})
+        if act == "relation/save":
+            return self._send(200, STORY.save_relation(d.get("series", ""), d))
+        if act == "relation/delete":
+            STORY.delete_relation(int(d["id"]))
+            return self._send(200, {"ok": True})
+        if act == "episode/save":
+            STORY.update_episode(int(d["id"]), d)
+            return self._send(200, {"ok": True})
+        if act == "episode/delete":
+            STORY.delete_episode(int(d["id"]))
+            return self._send(200, {"ok": True})
+        if act == "import":
+            sid, n = STORY.import_(d.get("data"), d.get("series") or None)
+            return self._send(200, {"series": sid, "added": n})
+        if act == "link":
+            job = self._job(d["id"])
+            sid = d.get("series") or "auto"
+            if sid == "new":
+                sid = STORY.save_series({"name": (d.get("name") or "").strip() or guess_episode(job.name)[0] or job.name,
+                                         "lang": job.lang})["id"]
+            sid = link_job_series(job, sid, d.get("ep"))
+            return self._send(200, {"series": sid, "ep": job.settings.get("ep", ""), "settings": job.settings})
+        if act == "run":
+            task = d.get("task")
+            if task not in ("review", "analyze", "summary"):
+                raise ValueError("Thao tác không hợp lệ")
+            cfg = dict(d.get("config") or {}, _agent=task)
+            n = STATE.enqueue(d.get("ids", []), cfg, False, d.get("chapter"))
+            return self._send(200, {"queued": n})
+        if act == "qa":
+            job = self._job(d["id"])
+            sid = job.settings.get("series")
+            terms = STORY.terms(sid) if sid and STORY.series(sid) else \
+                [{"id": 0, "src": a, "vi": b} for a, b in parse_pairs(job.settings.get("glossary", "")) if b]
+            with STATE.lock:
+                segs = job.book.segs
+                issues, _ = qa_check(segs, range(len(segs)), terms, d.get("tgt") or "vi", job.book.kind == "sub")
+                ign = job.agent["ignored"]
+                job.agent["issues"] = {i: v for i, v in issues.items() if i not in ign}
+                job.agent_rev += 1
+                job.dirty = True
+                n = len(job.agent["issues"])
+            return self._send(200, {"issues": n})
+        if act in ("revert", "accept", "ignore"):
+            job = self._job(d["id"])
+            i = int(d["i"])
+            with STATE.lock:
+                ag = job.agent
+                if act == "revert" and i in ag["edits"]:
+                    job.book.segs[i].vi = ag["edits"].pop(i)["old"] or None
+                elif act == "accept":
+                    ag["edits"].pop(i, None)
+                elif act == "ignore":
+                    ag["issues"].pop(i, None)
+                    ag["ignored"].add(i)
+                job.events.append(i)
+                job.agent_rev += 1
+                job.dirty = True
+            return self._send(200, {"ok": True})
+        if act == "accept_all":
+            job = self._job(d["id"])
+            with STATE.lock:
+                job.agent["edits"] = {}
+                job.agent_rev += 1
+                job.dirty = True
+            return self._send(200, {"ok": True})
+        return self._send(404, {"error": "not found"})
 
     def _upload(self, q, st=None):
         st = st or STT
@@ -4923,9 +6093,13 @@ class Handler(BaseHTTPRequestHandler):
                 txt = d.get("text")
                 with STATE.lock:
                     job.book.segs[i].vi = txt if txt and txt.strip() else None
+                    job.agent["issues"].pop(i, None)
+                    job.agent["edits"].pop(i, None)
                     job.events.append(i)
                     job.dirty = True
                 return self._send(200, {"ok": True})
+            if u.path.startswith("/api/agent/"):
+                return self._agent_post(u.path[len("/api/agent/"):], d)
             if u.path == "/api/save":
                 job = self._job(d["id"])
                 with STATE.lock:

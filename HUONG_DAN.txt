@@ -1,4 +1,4 @@
-DỊCH SUB & BOOK v3.3 BY DUY ANH — dịch phụ đề, sách, truyện sang tiếng Việt, tạo phụ đề từ video
+DỊCH SUB & BOOK v4.0 AGENT EDITOR BY DUY ANH — dịch phụ đề, sách, truyện sang tiếng Việt, tạo phụ đề từ video
 =========================================================================
 
 CHẠY APP
@@ -81,6 +81,26 @@ PHỤ ĐỀ NỀN ĐEN (mục Xuất file, biểu tượng mũi tên tải xuố
 - Có sẵn file SRT? Bấm nút "SRT → ASS nền đen" trên thanh trên cùng: mở cửa sổ riêng, kéo thả
   hoặc chọn nhiều file SRT, VTT, ASS, chuyển ngay không cần dịch, file .ASS lưu cạnh file gốc.
 - Mở phim: để file .ASS cùng thư mục, cùng tên với phim (Phim.vi.ass), trình xem phim tự nhận.
+
+AGENT EDITOR - NHỚ CỐT TRUYỆN (biểu tượng ngôi sao lấp lánh trên thanh trái)
+Giữ tên nhân vật, cảnh giới, chiêu thức, cách xưng hô giống hệt nhau qua mọi tập của một bộ phim.
+1. Chọn dịch vụ AI trong "Dịch vụ dịch": Claude Code, Codex, Antigravity (dùng tài khoản đã đăng nhập trên máy),
+   Gemini, OpenAI, DeepSeek, Groq, OpenRouter, Ollama hoặc LM Studio. GTX, Edge, HachimiMT chỉ dịch thường.
+   - Claude Code: CMD gõ  npm install -g @anthropic-ai/claude-code  rồi gõ  claude  một lần để đăng nhập.
+   - Codex: CMD gõ  npm install -g @openai/codex  rồi  codex login.
+   - Antigravity: PowerShell gõ  irm https://antigravity.google/cli/install.ps1 | iex  rồi gõ  agy  để đăng nhập.
+   Bấm "Kiểm tra" để xem app đã tìm thấy chưa. Nếu cài ở chỗ khác, điền đường dẫn file chạy.
+2. Bật Agent Editor (công tắc vàng). Agent tự chạy: đọc hiểu cả tập (học tên mới) -> dịch có ngữ cảnh
+   -> tự thẩm định, hiệu đính -> ghi nhớ tóm tắt tập.
+3. Đặt tên file có số tập (Tên phim - Tap 05.srt, E05, S01E05, 第5集...). App tự nhận bộ phim và số tập;
+   các tập cùng bộ dùng chung bộ nhớ. Muốn chọn tay: mục "Bộ phim của tài liệu đang mở".
+4. Dịch tập 1 trước, mở "Bộ nhớ cốt truyện" duyệt lại tên AI đề xuất (dòng nền vàng), sửa cho đúng ý,
+   rồi dịch các tập sau. Sửa một tên ở đây, app hỏi thay luôn trong các tập đã dịch.
+5. Sau khi dịch, xem thanh timeline: đỏ = cần xem, vàng = Agent đã sửa. Bấm "Chỗ cần xem tiếp theo"
+   hoặc tick "Cần xem". Trên từng dòng: Hoàn tác (về bản cũ), Giữ, Bỏ qua cảnh báo; bấm vào bản dịch để sửa tay.
+6. "Kiểm tra lỗi ngay" không tốn AI. "Thẩm định, hiệu đính lại" cho Agent rà lại cả tài liệu.
+   "Xuất bộ nhớ" để chép sang máy khác hoặc chia sẻ cho nhóm làm sub.
+Mẹo: AI Agent CLI mỗi lần gọi mất vài giây khởi động, nên để "Dòng phụ đề mỗi lần" khoảng 60-100.
 
 VĂN PHONG VÀ TỪ ĐIỂN (riêng cho từng tài liệu, biểu tượng cuốn sách trên thanh trái)
 - Văn phong: Tự nhiên hiện đại / Kiếm hiệp cổ trang / Ngôn tình / Sát nghĩa (áp dụng khi dịch bằng AI).

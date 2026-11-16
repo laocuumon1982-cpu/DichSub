@@ -4,6 +4,7 @@ Dịch phụ đề (SRT, ASS, VTT) và sách, truyện (EPUB, Word, PDF, TXT, MO
 
 **[Tải bản mới nhất](https://github.com/laocuumon1982-cpu/DichSub/releases/latest)**: `DichSub.exe` (1 file) hoặc `DichSub-Portable.zip` (portable).
 
+- **Agent Editor (4.0)**: bộ nhớ cốt truyện dùng chung cho cả bộ phim (tên nhân vật, cảnh giới, xưng hô, tóm tắt tập), dịch có ngữ cảnh, tự thẩm định và hiệu đính, sửa trên timeline. Chạy bằng Claude Code, Codex, Antigravity hoặc bất kỳ AI nào bên dưới.
 - Dịch bằng GTX / Edge (miễn phí), Gemini, OpenAI, DeepSeek, Groq, OpenRouter, Ollama, LM Studio, HachimiMT (Trung → Việt, offline).
 - Giọng nói ra phụ đề: Whisper chạy trên máy (GPU NVIDIA / CPU), Groq Whisper, OpenAI Whisper.
 - Quét phụ đề in sẵn (hardsub) ra SRT bằng RapidOCR: Trung, Nhật, Anh, Hàn, Việt.
