@@ -425,6 +425,18 @@ table.mt .x:hover{color:var(--err);background:var(--err-soft)}
 .mem-foot{display:flex;gap:8px;align-items:center;padding:12px 20px;border-top:1px solid var(--line)}
 .mem-empty{padding:40px 10px;text-align:center;color:var(--muted)}
 .btn.danger{color:var(--err)}
+
+.dlg.learn{width:min(760px,calc(100vw - 32px));display:flex;flex-direction:column}
+.dlg.learn .dlg-b{overflow:auto;flex:1}
+.lrn-list{border:1px solid var(--line);border-radius:10px;max-height:320px;overflow:auto;margin-top:6px}
+.lrn-it{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line-soft);cursor:pointer;font-size:13px}
+.lrn-it:last-child{border-bottom:0}
+.lrn-it:hover{background:var(--hover)}
+.lrn-it .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lrn-it small{color:var(--muted);white-space:nowrap}
+.lrn-it .tag{font-size:11px;padding:1px 7px;border-radius:9px;background:var(--ok-soft,var(--sel));color:var(--ok)}
+.lrn-warn{margin-top:8px;font-size:12px;color:var(--err);line-height:1.5}
+.ag-acts .wide{grid-column:1/-1}
 </style>
 </head>
 <body>
@@ -727,6 +739,24 @@ table.mt .x:hover{color:var(--err);background:var(--err-soft)}
   </div>
 </div>
 <input type="file" id="memIn" hidden accept=".json">
+<div class="overlay" id="learnDlg" hidden>
+  <div class="dlg learn" role="dialog" aria-modal="true" aria-labelledby="lrnT">
+    <div class="dlg-h"><b id="lrnT">Học từ bản dịch chuẩn</b><button class="btn ghost sm" id="lrnClose">Đóng</button></div>
+    <div class="dlg-b">
+      <div class="hint" style="margin-top:0">Agent đọc hết các tập đã dịch chuẩn (bạn hoặc nhóm sub đã làm), so câu gốc với câu dịch để học đúng tên nhân vật, địa điểm, môn phái, cảnh giới, chiêu thức và cách xưng hô. Tên học được ghi là <b>đã duyệt</b>, các tập sau dịch theo đúng như vậy.</div>
+      <label class="f" for="lrnSer">Lưu vào bộ nhớ của bộ phim</label>
+      <select id="lrnSer"></select>
+      <div class="row" style="margin-top:14px;justify-content:space-between"><label class="f" style="margin:0">Chọn tập đã dịch chuẩn</label>
+        <span><button class="btn ghost sm" id="lrnAll">Chọn tất cả</button><button class="btn ghost sm" id="lrnNone">Bỏ chọn</button></span></div>
+      <div class="lrn-list" id="lrnList"></div>
+      <div class="row" style="margin-top:10px"><button class="btn sm" id="lrnAdd">+ Thêm file gốc và bản dịch chuẩn…</button>
+        <span class="hint" style="margin:0">Chọn nhiều file một lần (vd. Tap 01.zh.srt + Tap 01.vi.srt…), app tự ghép theo số tập.</span></div>
+      <div id="lrnWarn" class="lrn-warn"></div>
+    </div>
+    <div class="mem-foot"><span class="grow hint" id="lrnInfo" style="margin:0"></span><button class="btn primary" id="lrnGo">Bắt đầu học</button></div>
+  </div>
+</div>
+<input type="file" id="lrnIn" hidden multiple accept=".srt,.ass,.ssa,.vtt">
 <div class="overlay" id="updOverlay" hidden><div class="box"><b id="updOvT">Đang khởi động lại…</b><span id="updOvS">App đang cài bản mới, cửa sổ sẽ tự tải lại.</span></div></div>
 
 <script>
@@ -1870,6 +1900,7 @@ $("#moreBtn").onclick = e => {
     {label:"Agent: thẩm định, hiệu đính lại", run:() => agentRun("review")},
     {label:"Agent: kiểm tra lỗi ngay", hint:"không tốn AI", run:() => $("#agQa") ? $("#agQa").click() : api("/api/agent/qa", {id:sel, tgt:cfg.target}).then(poll)},
     {label:"Bộ nhớ cốt truyện…", run:() => j.series ? openMem(j.series) : showPanel("agent")},
+    {label:"Agent: học từ bản dịch này (bản chuẩn)", run:() => openLearn([sel])},
     ...(j.saved ? [{label:"Mở thư mục đã lưu", run:() => api("/api/open_folder", {path:j.saved})}] : []),
     "-",
     {label:"Xoá khỏi danh sách", cls:"danger", run:async () => {
@@ -2032,9 +2063,12 @@ function renderAgentPanel(){
       <button class="btn sm" id="agQa" title="Không gửi AI, chạy ngay">Kiểm tra lỗi ngay</button>
       <button class="btn sm" id="agRev">Thẩm định, hiệu đính lại</button>
       <button class="btn sm" id="agLearn">Học tên, thuật ngữ</button>
-      <button class="btn sm" id="agSum">Tóm tắt tập vào bộ nhớ</button></div>
+      <button class="btn sm" id="agSum">Tóm tắt tập vào bộ nhớ</button>
+      <button class="btn sm wide" id="agLearnThis" title="Bản dịch đang mở là bản chuẩn: học tên, xưng hô từ nó">Học từ bản dịch đang mở (bản chuẩn)</button></div>
       <div class="hint">${num(j.issues||0)} chỗ cần xem, ${num(j.edits||0)} câu Agent đã sửa.${j.edits ? ` <a href="#" id="agKeepAll">Giữ tất cả bản sửa</a>` : ""}</div></div>`;
   }
+  h += `<div class="sec"><h3>Học từ bản dịch chuẩn</h3><div class="hint" style="margin-top:0">Có sẵn vài tập đã dịch chuẩn? Cho Agent đọc hết để học đúng tên nhân vật, địa điểm, cảnh giới, xưng hô trước khi dịch các tập mới.</div>
+    <button class="btn sm primary" id="agLearnStd" style="margin-top:8px;width:100%;justify-content:center">Chọn tập đã dịch chuẩn…</button></div>`;
   h += `<div class="sec"><h3>Bộ nhớ đã có</h3>${seriesList.length ? `<div class="ser-list">${seriesList.map(x => `<button class="ser-it" data-id="${x.id}">${SER_ICON}<span class="nm">${esc(x.name)}</span><small>${num(x.terms)} tên · ${num(x.episodes)} tập</small></button>`).join("")}</div>` : `<div class="empty-mini">Chưa có bộ phim nào. Dịch một tập với Agent Editor để bắt đầu.</div>`}
     <button class="btn sm" id="agImport" style="margin-top:8px">Nhập bộ nhớ từ file…</button></div>`;
   box.innerHTML = h;
@@ -2044,6 +2078,7 @@ function renderAgentPanel(){
   if($("#agPickSvc")) $("#agPickSvc").onclick = e => { e.preventDefault(); showPanel("svc"); };
   $$(".ser-it").forEach(b => b.onclick = () => openMem(b.dataset.id));
   $("#agImport").onclick = () => { memSid = null; $("#memIn").click(); };
+  $("#agLearnStd").onclick = () => openLearn(sel ? [sel] : []);
   if(!j) return;
   $("#agSer").onchange = async e => {
     let v = e.target.value, name = "";
@@ -2056,6 +2091,7 @@ function renderAgentPanel(){
   $("#agRev").onclick = () => agentRun("review");
   $("#agLearn").onclick = () => agentRun("analyze");
   $("#agSum").onclick = () => agentRun("summary");
+  $("#agLearnThis").onclick = () => openLearn([sel]);
   if($("#agKeepAll")) $("#agKeepAll").onclick = async e => { e.preventDefault(); await api("/api/agent/accept_all", {id:sel}); poll(); };
   if(!j.series) api("/api/agent/guess?id=" + sel).then(g => { if($("#agGuess") && g.name) $("#agGuess").innerHTML = `Agent sẽ nhận là <b>${esc(g.name)}</b>${g.ep ? `, tập ${esc(g.ep)}` : ""}${g.found ? " (đã có trong bộ nhớ)" : " (bộ mới)"}.`; }).catch(()=>{});
 }
@@ -2063,11 +2099,15 @@ async function linkSeries(sid, ep, name){
   try{ const d = await api("/api/agent/link", {id:sel, series:sid, ep, name}); if(book) book.settings = d.settings; await loadSeries(); poll(); toast(`Đã gắn vào “${serName(d.series)}”${d.ep ? ", tập " + d.ep : ""}.`, "ok"); }
   catch(e){ toast(e.message, "err"); }
 }
-async function agentRun(task, chapter = null){
+function agentReady(){
   const s = SERVICES[cfg.service], c = svcCfg();
-  if(!agSupported()){ showPanel("svc"); return toast("Agent Editor cần dịch vụ AI: Claude Code, Codex, Antigravity, Gemini, OpenAI, DeepSeek, Ollama, LM Studio…", "err"); }
-  if(s.kind === "llm" && !c.key){ showPanel("svc"); return toast(`Chưa nhập API key cho ${s.name}.`, "err"); }
-  if((s.kind === "llm" || s.kind === "local") && !c.model){ showPanel("svc"); return toast("Chưa chọn model.", "err"); }
+  if(!agSupported()){ showPanel("svc"); toast("Agent Editor cần dịch vụ AI: Claude Code, Codex, Antigravity, Gemini, OpenAI, DeepSeek, Ollama, LM Studio…", "err"); return false; }
+  if(s.kind === "llm" && !c.key){ showPanel("svc"); toast(`Chưa nhập API key cho ${s.name}.`, "err"); return false; }
+  if((s.kind === "llm" || s.kind === "local") && !c.model){ showPanel("svc"); toast("Chưa chọn model.", "err"); return false; }
+  return true;
+}
+async function agentRun(task, chapter = null){
+  if(!agentReady()) return;
   const j = job(); if(task !== "analyze" && j && !j.done) return toast("Tài liệu chưa có câu nào được dịch.");
   try{ const d = await api("/api/agent/run", {ids:[sel], config:runCfg(), task, chapter}); toast(d.queued ? "Agent đang làm việc, xem tiến trình ở Nhật ký." : "Tài liệu đang dịch hoặc đang chờ."); poll(); }
   catch(e){ toast(e.message, "err"); }
@@ -2170,7 +2210,7 @@ async function loadMem(){
 function closeMem(){ $("#memDlg").hidden = true; }
 $("#memClose").onclick = closeMem;
 $("#memDlg").addEventListener("click", e => { if(e.target.id === "memDlg") closeMem(); });
-document.addEventListener("keydown", e => { if(e.key === "Escape" && !$("#memDlg").hidden) closeMem(); });
+document.addEventListener("keydown", e => { if(e.key === "Escape" && !$("#memDlg").hidden) closeMem(); if(e.key === "Escape") $("#learnDlg").hidden = true; });
 $("#memSer").onchange = e => { memSid = e.target.value; loadMem(); };
 $("#memTab").onclick = e => { const b = e.target.closest("button"); if(!b) return; memTab = b.dataset.v; $$("#memTab button").forEach(x => x.classList.toggle("on", x === b)); renderMem(); };
 const kindOpts = v => Object.entries(KIND_NAMES).map(([k, n]) => `<option value="${k}" ${k===v?"selected":""}>${n}</option>`).join("");
@@ -2269,6 +2309,48 @@ $("#memIn").onchange = async () => {
 $("#memDel").onclick = async () => {
   if(!memSid || !confirm(`Xoá toàn bộ bộ nhớ của “${mem?.series.name}”? Tên, thuật ngữ, xưng hô và tóm tắt các tập sẽ mất (bản dịch đã có không bị ảnh hưởng).`)) return;
   await api("/api/agent/series/delete", {id:memSid}); await loadSeries(); memSid = seriesList[0]?.id || null; loadMem(); poll();
+};
+
+/* ---- học từ bản dịch chuẩn */
+let lrnPick = new Set();
+function openLearn(pre = []){
+  lrnPick = new Set(pre.filter(id => (jobs.find(j => j.id === id)?.done || 0) > 0));
+  const cur = pre.length ? jobs.find(j => j.id === pre[0]) : null;
+  $("#lrnSer").innerHTML = `<option value="auto">Tự nhận theo tên file</option>` + seriesList.map(x => `<option value="${x.id}" ${cur?.series === x.id ? "selected" : ""}>${esc(x.name)}</option>`).join("") + `<option value="new">+ Tạo bộ phim mới…</option>`;
+  $("#lrnWarn").textContent = ""; $("#learnDlg").hidden = false; renderLearn();
+}
+function renderLearn(){
+  const list = jobs.filter(j => (j.done || 0) > 0);
+  $("#lrnList").innerHTML = list.length ? list.map(j => `<label class="lrn-it"><input type="checkbox" data-id="${j.id}" ${lrnPick.has(j.id) ? "checked" : ""}><span class="nm" title="${esc(j.name)}">${esc(j.name)}</span>${j.learned ? `<span class="tag">đã học</span>` : ""}${j.series ? `<small>${esc(serName(j.series))}${j.ep ? " · tập " + esc(j.ep) : ""}</small>` : ""}<small>${Math.round(100 * j.done / Math.max(1, j.total))}% đã dịch</small></label>`).join("")
+    : `<div class="empty-mini" style="padding:18px">Chưa có tài liệu nào có bản dịch. Bấm “Thêm file gốc và bản dịch chuẩn…”.</div>`;
+  $$("#lrnList input").forEach(c => c.onchange = () => { c.checked ? lrnPick.add(c.dataset.id) : lrnPick.delete(c.dataset.id); lrnCount(); });
+  lrnCount();
+}
+function lrnCount(){ $("#lrnInfo").textContent = lrnPick.size ? `Đã chọn ${lrnPick.size} tập. Agent dùng ${SERVICES[cfg.service]?.name || ""}.` : "Chưa chọn tập nào."; $("#lrnGo").disabled = !lrnPick.size; }
+$("#lrnClose").onclick = () => $("#learnDlg").hidden = true;
+$("#learnDlg").addEventListener("click", e => { if(e.target.id === "learnDlg") $("#learnDlg").hidden = true; });
+$("#lrnAll").onclick = () => { jobs.filter(j => (j.done || 0) > 0).forEach(j => lrnPick.add(j.id)); renderLearn(); };
+$("#lrnNone").onclick = () => { lrnPick.clear(); renderLearn(); };
+$("#lrnAdd").onclick = () => $("#lrnIn").click();
+$("#lrnIn").onchange = async () => {
+  const fs = [...$("#lrnIn").files]; $("#lrnIn").value = ""; if(!fs.length) return;
+  $("#lrnWarn").textContent = "Đang ghép file…";
+  try{
+    const files = []; for(const f of fs) files.push({name:f.name, data:await readB64(f)});
+    const d = await api("/api/agent/pairs", {files});
+    d.added.forEach(j => lrnPick.add(j.id));
+    await poll(); renderLearn();
+    $("#lrnWarn").innerHTML = (d.added.length ? `<span style="color:var(--ok)">Đã ghép ${d.added.length} tập.</span> ` : "") +
+      (d.unpaired.length ? "Không ghép được: " + d.unpaired.map(esc).join(", ") + ". Cần cả file gốc và file đã dịch tiếng Việt của cùng một tập." : "");
+  }catch(e){ $("#lrnWarn").textContent = e.message; }
+};
+$("#lrnGo").onclick = async () => {
+  if(!agentReady()) return;
+  let series = $("#lrnSer").value, name = "";
+  if(series === "new"){ name = prompt("Tên bộ phim / bộ truyện:", ""); if(!name) return; }
+  try{ const d = await api("/api/agent/run", {ids:[...lrnPick], config:runCfg(), task:"learn", series, name});
+    $("#learnDlg").hidden = true; toast(`Agent đang đọc ${d.queued} tập đã dịch chuẩn để học tên, xưng hô. Xem tiến trình ở Nhật ký.`); poll(); loadSeries(); }
+  catch(e){ toast(e.message, "err"); }
 };
 
 /* ---- AI Agent CLI (Claude Code, Codex, Antigravity) */

@@ -96,6 +96,9 @@ Giữ tên nhân vật, cảnh giới, chiêu thức, cách xưng hô giống h�
    các tập cùng bộ dùng chung bộ nhớ. Muốn chọn tay: mục "Bộ phim của tài liệu đang mở".
 4. Dịch tập 1 trước, mở "Bộ nhớ cốt truyện" duyệt lại tên AI đề xuất (dòng nền vàng), sửa cho đúng ý,
    rồi dịch các tập sau. Sửa một tên ở đây, app hỏi thay luôn trong các tập đã dịch.
+   Có sẵn tập đã dịch chuẩn (nhóm sub làm)? Bấm "Chọn tập đã dịch chuẩn…": tick các tập trong danh sách,
+   hoặc "Thêm file gốc và bản dịch chuẩn…" chọn cùng lúc nhiều file (Tap 01.zh.srt + Tap 01.vi.srt...),
+   app tự ghép theo số tập. Bấm "Bắt đầu học": Agent đọc hết, học đúng tên, xưng hô theo bản dịch đó.
 5. Sau khi dịch, xem thanh timeline: đỏ = cần xem, vàng = Agent đã sửa. Bấm "Chỗ cần xem tiếp theo"
    hoặc tick "Cần xem". Trên từng dòng: Hoàn tác (về bản cũ), Giữ, Bỏ qua cảnh báo; bấm vào bản dịch để sửa tay.
 6. "Kiểm tra lỗi ngay" không tốn AI. "Thẩm định, hiệu đính lại" cho Agent rà lại cả tài liệu.

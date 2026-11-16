@@ -17,6 +17,7 @@ Hết cảnh tập 1 dịch một kiểu, tập 2 tên nhân vật, cảnh giớ
   - Tự rà soát: câu dịch sai, dịch sót, còn chữ nước ngoài, sai tên so với bộ nhớ, xưng hô lệch, câu quá dài so với thời gian hiện. Sửa xong ghi rõ lý do, giữ bản cũ để hoàn tác.
   - Dịch xong cả tập thì tóm tắt tập và cập nhật cốt truyện chung cho các tập sau.
 - **Sửa trên timeline**: thanh timeline cả tập tô màu chưa dịch / đã dịch / cần xem / Agent đã sửa; bấm để nhảy tới câu, nút "Chỗ cần xem tiếp theo", lọc "Cần xem", Hoàn tác / Giữ / Bỏ qua ngay trên từng dòng.
+- **Học từ bản dịch chuẩn** (nút "Chọn tập đã dịch chuẩn…" trong Agent Editor): chọn các tập đã dịch chuẩn có sẵn trong danh sách, hoặc thêm cặp file gốc + bản dịch (vd. `Tap 01.zh.srt` + `Tap 01.vi.srt`, app tự ghép theo số tập và thời gian). Agent đọc hết, so câu gốc với câu dịch để học đúng tên nhân vật, địa điểm, môn phái, cảnh giới, chiêu thức, xưng hô theo bản dịch đó, ghi là đã duyệt và sửa lại các tên AI tự đoán trước đó. Chỉ nhận tên thật sự xuất hiện trong bản dịch chuẩn.
 - **Đổi tên một lần, sửa mọi tập**: sửa bản dịch của một tên trong bộ nhớ, app hỏi thay luôn trong các tập đã dịch.
 - **Dùng AI Agent trên máy**: Claude Code, Codex, Antigravity (dùng tài khoản đã đăng nhập, không cần API key), cùng Gemini, OpenAI, DeepSeek, Groq, OpenRouter và AI chạy offline Ollama, LM Studio.
 - "Kiểm tra lỗi ngay" chạy không tốn AI. Tạo phụ đề từ video / quét OCR rồi "Tự dịch" cũng đi qua Agent.

@@ -4241,7 +4241,7 @@ class Job:
         self.run_n0 = 0           # số đoạn đã xong lúc bắt đầu
         self.out_dir = ""         # lưu riêng (vd. phụ đề tạo từ video: lưu cạnh video)
         # Agent Editor: vấn đề tìm thấy, các câu Agent đã sửa (giữ bản cũ để hoàn tác)
-        self.agent = {"issues": {}, "edits": {}, "ignored": set(), "reviewed": set(), "analyzed": False}
+        self.agent = {"issues": {}, "edits": {}, "ignored": set(), "reviewed": set(), "analyzed": False, "learned": False}
         self.agent_rev = 0
 
     def load_agent(self):
@@ -4252,7 +4252,7 @@ class Job:
             self.agent = {"issues": {int(k): v for k, v in (d.get("issues") or {}).items() if int(k) < n},
                           "edits": {int(k): v for k, v in (d.get("edits") or {}).items() if int(k) < n},
                           "ignored": set(d.get("ignored") or []), "reviewed": set(d.get("reviewed") or []),
-                          "analyzed": bool(d.get("analyzed"))}
+                          "analyzed": bool(d.get("analyzed")), "learned": bool(d.get("learned"))}
         except (OSError, ValueError):
             pass
 
@@ -4264,7 +4264,8 @@ class Job:
         tmp = os.path.join(self.dir, "agent.json.tmp")
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump({"issues": ag["issues"], "edits": ag["edits"], "ignored": sorted(ag["ignored"]),
-                       "reviewed": sorted(ag["reviewed"]), "analyzed": ag["analyzed"]}, f, ensure_ascii=False)
+                       "reviewed": sorted(ag["reviewed"]), "analyzed": ag["analyzed"], "learned": ag.get("learned", False)},
+                      f, ensure_ascii=False)
         os.replace(tmp, os.path.join(self.dir, "agent.json"))
 
     @property
@@ -4291,7 +4292,8 @@ class Job:
                 "chapters": len(self.book.chapters), "title": self.book.title, "rate": rate, "eta": eta,
                 "chars": sum(len(s.src) for s in self.book.segs) if not hasattr(self, "_chars") else self._chars,
                 "series": self.settings.get("series", ""), "ep": self.settings.get("ep", ""),
-                "issues": len(self.agent["issues"]), "edits": len(self.agent["edits"]), "agentRev": self.agent_rev}
+                "issues": len(self.agent["issues"]), "edits": len(self.agent["edits"]), "agentRev": self.agent_rev,
+                "learned": self.agent.get("learned", False)}
 
     def chapter_progress(self):
         segs = self.book.segs
@@ -4533,7 +4535,8 @@ class State:
                         job.agent["reviewed"].discard(k + a)
                     job.agent["analyzed"] = False
                     job.events.append(-1)
-            label = {"review": "thẩm định và hiệu đính", "analyze": "đọc hiểu, học tên", "summary": "tóm tắt tập"}.get(task)
+            label = {"review": "thẩm định và hiệu đính", "analyze": "đọc hiểu, học tên", "summary": "tóm tắt tập",
+                     "learn": "học từ bản dịch chuẩn"}.get(task)
             self.log(f"Bắt đầu {label} {scope}." if label else f"Bắt đầu dịch {scope}.", job)
             t0 = time.time()
             job.run_t0, job.run_n0 = t0, job.counts()[0]
@@ -4558,7 +4561,7 @@ class State:
             self.log(f"LỖI: {e}", job)
             log_file(f"Lỗi khi dịch {job.name}: {e!r}")
         done, _ = job.counts()
-        if cfg.get("autosave", True) and done and job.status in ("done", "partial", "stopped"):
+        if cfg.get("autosave", True) and cfg.get("_agent") not in ("learn", "analyze", "summary") and done and job.status in ("done", "partial", "stopped"):
             try:
                 fmt = cfg.get("format", "orig")
                 if job.book.kind == "sub" and assbox_style().get("on"):
@@ -4787,18 +4790,26 @@ class StoryDB:
         self.touch(sid)
         return self.term(tid)
 
-    def learn_term(self, sid, d, ep=""):
-        """AI đề xuất: chỉ thêm tên mới, không bao giờ đổi tên đã có (giữ đồng nhất giữa các tập)."""
+    def learn_term(self, sid, d, ep="", trusted=False):
+        """AI đề xuất: chỉ thêm tên mới, không bao giờ đổi tên đã có (giữ đồng nhất giữa các tập).
+        trusted=True (học từ bản dịch chuẩn): ghi là đã duyệt và sửa lại các tên AI tự đề xuất trước đó."""
         src = (d.get("src") or "").strip()
         vi = (d.get("vi") or "").strip()
         if not src or not vi or len(src) > 40 or src == vi and CJK_RE.search(src):
             return False
-        if self.q("SELECT id FROM terms WHERE series=? AND src=?", (sid, src), True):
-            return False
         kind = d.get("kind") if d.get("kind") in TERM_KINDS else "other"
         g = (d.get("gender") or "").lower()[:1]
-        self.x("INSERT INTO terms(series,src,vi,kind,gender,note,ok,hits,first_ep,updated) VALUES(?,?,?,?,?,?,0,0,?,?)",
-               (sid, src, vi, kind, g if g in ("m", "f") else "", (d.get("note") or "").strip()[:200], str(ep or ""), _now()))
+        g = g if g in ("m", "f") else ""
+        note = (d.get("note") or "").strip()[:200]
+        old = self.q("SELECT * FROM terms WHERE series=? AND src=?", (sid, src), True)
+        if old:
+            if not trusted or old["ok"]:
+                return False
+            self.x("UPDATE terms SET vi=?, kind=?, gender=?, note=?, ok=1, updated=? WHERE id=?",
+                   (vi, kind, g or old["gender"], note or old["note"], _now(), old["id"]))
+            return True
+        self.x("INSERT INTO terms(series,src,vi,kind,gender,note,ok,hits,first_ep,updated) VALUES(?,?,?,?,?,?,?,0,?,?)",
+               (sid, src, vi, kind, g, note, 1 if trusted else 0, str(ep or ""), _now()))
         return True
 
     def delete_term(self, tid):
@@ -4832,15 +4843,21 @@ class StoryDB:
         self.touch(sid)
         return self.q("SELECT * FROM relations WHERE id=?", (rid,), True)
 
-    def learn_relation(self, sid, d):
-        a, b = (d.get("a") or "").strip(), (d.get("b") or "").strip()
-        sw, cw = (d.get("self") or d.get("self_word") or "").strip(), (d.get("call") or d.get("call_word") or "").strip()
+    def learn_relation(self, sid, d, trusted=False):
+        a, b = (d.get("a") or "").strip()[:60], (d.get("b") or "").strip()[:60]
+        sw, cw = (d.get("self") or d.get("self_word") or "").strip()[:40], (d.get("call") or d.get("call_word") or "").strip()[:40]
         if not a or not b or a == b or not (sw or cw):
             return False
-        if self.q("SELECT id FROM relations WHERE series=? AND a=? AND b=?", (sid, a, b), True):
-            return False
-        self.x("INSERT INTO relations(series,a,b,self_word,call_word,note,ok,updated) VALUES(?,?,?,?,?,?,0,?)",
-               (sid, a[:60], b[:60], sw[:40], cw[:40], (d.get("note") or "").strip()[:200], _now()))
+        note = (d.get("note") or "").strip()[:200]
+        old = self.q("SELECT * FROM relations WHERE series=? AND a=? AND b=?", (sid, a, b), True)
+        if old:
+            if not trusted or old["ok"]:
+                return False
+            self.x("UPDATE relations SET self_word=?, call_word=?, note=?, ok=1, updated=? WHERE id=?",
+                   (sw, cw, note or old["note"], _now(), old["id"]))
+            return True
+        self.x("INSERT INTO relations(series,a,b,self_word,call_word,note,ok,updated) VALUES(?,?,?,?,?,?,?,?)",
+               (sid, a, b, sw, cw, note, 1 if trusted else 0, _now()))
         return True
 
     def delete_relation(self, rid):
@@ -5281,6 +5298,18 @@ Rules:
 - relations: only when the text makes the relationship clear (family, master/disciple, lovers, enemies, rank). Choose natural {tname} pronouns{pron}.
 - If nothing new, return {{"terms":[],"relations":[]}}."""
 
+LEARN_SYS = """You are the story editor of a professional {kindname} translation team ({sname} → {tname}). Below is an APPROVED, high-quality translation made by the team. Learn from it so future episodes use exactly the same names and terms.
+
+Return ONLY a JSON object, no markdown fences, no comments:
+{{"terms":[{{"src":"original term exactly as written in the source","vi":"the rendering EXACTLY as this translation wrote it","kind":"char|place|org|realm|skill|item|title|other","gender":"m|f|","note":"very short note in Vietnamese (role, who they are)"}}],
+ "relations":[{{"a":"speaker name as written in the translation","b":"listener name as written in the translation","self":"word the speaker uses for himself/herself in the translation","call":"word the speaker uses for the listener in the translation","note":""}}]}}
+
+Rules:
+- terms: ONLY proper names and special terms worth keeping consistent: people, nicknames, places, sects/organizations, cultivation realms/levels, techniques, artifacts, titles. Never common words.
+- Copy the {tname} form exactly as it appears in the approved translation, never invent your own.
+- relations: only pronoun pairs actually used in the translated dialogue where speaker and listener are clear.
+- If nothing, return {{"terms":[],"relations":[]}}."""
+
 REVIEW_SYS = """You are the chief editor of a professional {kindname} translation team ({sname} → {tname}). Check the draft translation line by line against the source and the SERIES BIBLE, and fix only what is wrong:
 - mistranslations, missing or added meaning, lines left untranslated or empty;
 - names and terms that differ from the bible (they MUST match exactly);
@@ -5376,6 +5405,12 @@ class AgentEngine(BookLLMEngine):
                   f" — nhớ {len(self.mem['terms'])} tên/thuật ngữ, {len(self.mem['relations'])} cách xưng hô, "
                   f"{len(self.mem['prev'])} tập trước.")
         ag = self.job.agent
+        if self.only == "learn":
+            self.learn(segs)
+            ag["analyzed"] = ag["learned"] = True
+            if remaining_count(self.job.book.segs) == 0 and self.opts.get("summary", True):
+                self.summarize()
+            return
         if self.only in (None, "analyze") and (self.only == "analyze" or self.opts.get("analyze", True)):
             if self.only == "analyze" or not ag.get("analyzed"):
                 self.analyze(segs)
@@ -5453,6 +5488,62 @@ class AgentEngine(BookLLMEngine):
         self.mem["relations"] = STORY.relations(self.mem["sid"])
         self.post("log", f"Agent: học thêm {new_t} tên/thuật ngữ, {new_r} cách xưng hô. Bộ nhớ hiện có "
                          f"{len(self.mem['terms'])} tên/thuật ngữ.")
+        self.post("memory", None)
+
+    def learn(self, segs):
+        """Đọc tập đã dịch chuẩn (gốc + bản dịch) để học đúng tên, thuật ngữ, xưng hô theo bản dịch đó."""
+        sname, tname = self._langs()
+        idxs = [i for i, s in enumerate(segs) if s.src.strip() and s.vi and s.vi.strip()]
+        if not idxs:
+            raise FatalError("Tài liệu này chưa có câu nào được dịch để Agent học.")
+        chunks, cur, n = [], [], 0
+        lim = max(3000, min(9000, self.max_chars * 3))
+        for i in idxs:
+            L = len(segs[i].src) + len(segs[i].vi)
+            if cur and n + L > lim:
+                chunks.append(cur)
+                cur, n = [], 0
+            cur.append(i)
+            n += L
+        if cur:
+            chunks.append(cur)
+        sys_p = LEARN_SYS.format(kindname=self._kindname(), sname=sname, tname=tname)
+        new_t = new_r = 0
+        self.post("log", f"Agent: đọc {len(idxs)} {self.unit} đã dịch chuẩn ({len(chunks)} phần) để học tên, thuật ngữ, xưng hô...")
+        one = lambda t: plain_text(t).replace("\n", " ")
+        for k, ch in enumerate(chunks):
+            if self.stop.is_set():
+                raise Stopped()
+            src_text = "\n".join(one(segs[i].src) for i in ch)
+            vi_text = "\n".join(one(segs[i].vi) for i in ch)
+            pairs = "\n".join(f"{one(segs[i].src)}  =>  {one(segs[i].vi)}" for i in ch)
+            known = [t for t in relevant_terms(STORY.terms(self.mem["sid"]), src_text) if t["ok"]]
+            user = []
+            if self.mem["series"].get("synopsis"):
+                user.append("Story so far: " + self.mem["series"]["synopsis"][:1200])
+            if known:
+                user.append("Already confirmed in the bible (skip them):\n" + "\n".join(f"{t['src']} → {t['vi']}" for t in known[:150]))
+            user.append(f"Approved translation (part {k + 1}/{len(chunks)}), source  =>  translation:\n" + pairs)
+            try:
+                d = _json_obj(self.chat([{"role": "system", "content": sys_p}, {"role": "user", "content": "\n\n".join(user)}]))
+            except (Stopped, FatalError):
+                raise
+            except Exception as e:
+                self.post("log", f"Agent: phần {k + 1} học lỗi ({e}), bỏ qua.")
+                continue
+            nv = _norm_cmp(vi_text)
+            for t in d.get("terms") or []:
+                if not isinstance(t, dict) or not t.get("src") or not t.get("vi"):
+                    continue
+                # chỉ nhận khi tên thật sự có trong bản gốc VÀ bản dịch chuẩn dùng đúng cách viết đó
+                if _term_in(src_text, str(t["src"]).strip()) and _norm_cmp(str(t["vi"])) in nv:
+                    new_t += STORY.learn_term(self.mem["sid"], t, self.mem["ep"], trusted=True)
+            for r in d.get("relations") or []:
+                if isinstance(r, dict):
+                    new_r += STORY.learn_relation(self.mem["sid"], r, trusted=True)
+        self.mem["terms"] = STORY.terms(self.mem["sid"])
+        self.mem["relations"] = STORY.relations(self.mem["sid"])
+        self.post("log", f"Agent: học từ bản dịch chuẩn được {new_t} tên/thuật ngữ, {new_r} cách xưng hô (ghi là đã duyệt).")
         self.post("memory", None)
 
     def _messages(self, idxs):
@@ -5625,6 +5716,101 @@ def timeline_data(job):
         st = 0 if s.vi is None else (2 if k in ag["issues"] else (3 if k in ag["edits"] else 1))
         out.append([k, round(a, 2), round(b, 2), st])
     return {"dur": dur, "cues": out}
+
+
+VI_MARK_RE = re.compile(r"[ăâđêôơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹĂÂĐÊÔƠƯ]")
+
+
+def is_vietnamese(segs):
+    s = "".join(x.src for x in segs[:400])[:20000]
+    lat = len(LATIN_RE.findall(s))
+    return lat > 20 and len(VI_MARK_RE.findall(s)) > lat * 0.04 and len(FOREIGN_RE.findall(s)) * 5 < lat
+
+
+def align_translation(src, tr):
+    """Gán câu bản dịch vào câu gốc: cùng số câu thì theo thứ tự, khác thì theo thời gian trùng nhau."""
+    def tm(s):
+        a, b = sub_times(s.time) if s.time else (None, None)
+        if a is None:
+            return (None, None)
+        return (a, b if b and b > a else a + 1)
+    S = [k for k, s in enumerate(src) if s.src.strip()]
+    T = [k for k, s in enumerate(tr) if s.src.strip()]
+    st, tt = [tm(src[k]) for k in S], [tm(tr[k]) for k in T]
+    timed = all(x[0] is not None for x in st + tt)
+    same = len(S) == len(T) and (not timed or all(abs(a[0] - b[0]) < 1.0 for a, b in zip(st, tt)))
+    out = {}
+    if same or not timed:
+        for i, j in zip(S, T):
+            out[i] = tr[j].src
+        return out
+    j0 = 0
+    for k, (a, b) in zip(S, st):
+        parts = []
+        while j0 < len(T) and tt[j0][1] <= a:
+            j0 += 1
+        j = j0
+        while j < len(T) and tt[j][0] < b:
+            ov = min(b, tt[j][1]) - max(a, tt[j][0])
+            if ov > 0.25 * min(b - a, tt[j][1] - tt[j][0]):
+                parts.append(tr[T[j]].src)
+            j += 1
+        if parts:
+            out[k] = "\n".join(dict.fromkeys(parts))
+    return out
+
+
+def make_pairs(files):
+    """Nhiều file phụ đề (gốc và bản dịch chuẩn) -> ghép theo số tập -> tạo tài liệu đã có bản dịch để Agent học."""
+    items = []
+    for name, data in files:
+        try:
+            b = parse_book(data, name)
+        except Exception as e:
+            items.append({"name": name, "err": str(e)})
+            continue
+        if b.kind != "sub":
+            items.append({"name": name, "err": "chỉ nhận file phụ đề"})
+            continue
+        g, ep = guess_episode(name)
+        stem = re.sub(r"(\.[a-z]{2,3}(-[a-z]+)?|[ ._-]+(vi|vie|viet|vietsub|zh|chs|cht|en|eng))+$", "",
+                      os.path.splitext(name)[0], flags=re.I)
+        items.append({"name": name, "data": data, "book": b, "vi": is_vietnamese(b.segs), "ep": ep,
+                      "key": series_key(g), "stem": series_key(stem)})
+    srcs = [x for x in items if "err" not in x and not x["vi"]]
+    vis = [x for x in items if "err" not in x and x["vi"]]
+    added, used = [], set()
+    for s in srcs:
+        free = [v for v in vis if id(v) not in used]
+        cand = [v for v in free if s["ep"] is not None and v["ep"] == s["ep"]]
+        if len(cand) > 1:
+            cand = [v for v in cand if v["key"] == s["key"]] or cand
+        if not cand:
+            cand = [v for v in free if v["stem"] == s["stem"]]
+        if not cand and len(srcs) == 1 and len(free) == 1:
+            cand = free
+        if not cand:
+            continue
+        v = cand[0]
+        mp = align_translation(s["book"].segs, v["book"].segs)
+        if not mp:
+            continue
+        used.add(id(v))
+        used.add(id(s))
+        job = STATE.add(s["name"], s["data"])
+        with STATE.lock:
+            for k, txt in mp.items():
+                if k < len(job.book.segs):
+                    job.book.segs[k].vi = txt
+            done, total = job.counts()[:2]
+            job.status = "done" if done >= total else "partial"
+            job.events.append(-1)
+            job.dirty = True
+        job.save_progress()
+        added.append(job)
+    unpaired = [x["name"] + (f" ({x['err']})" if "err" in x else ("" if x.get("vi") else " (không tìm thấy bản dịch cùng tập)"))
+                for x in items if id(x) not in used]
+    return added, unpaired
 
 
 class CliBookEngine(BookLLMEngine):
@@ -5882,6 +6068,10 @@ class Handler(BaseHTTPRequestHandler):
         if act == "import":
             sid, n = STORY.import_(d.get("data"), d.get("series") or None)
             return self._send(200, {"series": sid, "added": n})
+        if act == "pairs":
+            files = [(f["name"], base64.b64decode(f["data"])) for f in d.get("files", [])]
+            added, unpaired = make_pairs(files)
+            return self._send(200, {"added": [j.summary() for j in added], "unpaired": unpaired})
         if act == "link":
             job = self._job(d["id"])
             sid = d.get("series") or "auto"
@@ -5892,8 +6082,16 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, {"series": sid, "ep": job.settings.get("ep", ""), "settings": job.settings})
         if act == "run":
             task = d.get("task")
-            if task not in ("review", "analyze", "summary"):
+            if task not in ("review", "analyze", "summary", "learn"):
                 raise ValueError("Thao tác không hợp lệ")
+            sid = d.get("series")
+            if sid:
+                for jid in d.get("ids", []):
+                    job = self._job(jid)
+                    if sid == "new":
+                        sid = STORY.save_series({"name": (d.get("name") or "").strip() or guess_episode(job.name)[0]
+                                                 or job.name, "lang": job.lang})["id"]
+                    link_job_series(job, sid)
             cfg = dict(d.get("config") or {}, _agent=task)
             n = STATE.enqueue(d.get("ids", []), cfg, False, d.get("chapter"))
             return self._send(200, {"queued": n})
