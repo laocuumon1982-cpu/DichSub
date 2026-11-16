@@ -437,6 +437,22 @@ table.mt .x:hover{color:var(--err);background:var(--err-soft)}
 .lrn-it .tag{font-size:11px;padding:1px 7px;border-radius:9px;background:var(--ok-soft,var(--sel));color:var(--ok)}
 .lrn-warn{margin-top:8px;font-size:12px;color:var(--err);line-height:1.5}
 .ag-acts .wide{grid-column:1/-1}
+
+/* báo cáo Agent */
+.rpt{font-size:13.5px;line-height:1.6;max-width:900px}
+.rpt h2{font:600 16px/1.3 var(--head);margin:18px 0 8px}
+.rpt h2:first-child{margin-top:0}
+.rpt h3{font:600 13.5px/1.3 var(--head);margin:12px 0 4px}
+.rpt ul{margin:0;padding-left:20px}
+.rpt li{margin:2px 0}
+.rpt .ln{color:var(--primary);text-decoration:underline;text-underline-offset:2px;cursor:pointer;border:0;background:none;padding:0;font:inherit}
+.rpt s{color:var(--muted)}
+.rpt .src{color:var(--muted);font-size:12.5px}
+.rpt .kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:6px 0 4px}
+.rpt .kpi div{border:1px solid var(--line-soft);border-radius:10px;padding:8px 12px}
+.rpt .kpi b{display:block;font:600 20px/1.2 var(--head)}
+.rpt .kpi span{font-size:12px;color:var(--muted)}
+.rpt .more{font-size:12.5px}
 </style>
 </head>
 <body>
@@ -763,6 +779,13 @@ table.mt .x:hover{color:var(--err);background:var(--err-soft)}
   </div>
 </div>
 <input type="file" id="lrnIn" hidden multiple accept=".srt,.ass,.ssa,.vtt">
+<div class="overlay" id="rptDlg" hidden>
+  <div class="dlg wide" role="dialog" aria-modal="true" aria-labelledby="rptT">
+    <div class="dlg-h"><b id="rptT">Báo cáo Agent</b><button class="btn ghost sm" id="rptClose">Đóng</button></div>
+    <div class="dlg-b"><div class="rpt" id="rptBody"></div></div>
+    <div class="mem-foot"><button class="btn sm" id="rptCopy">Chép báo cáo</button><button class="btn sm" id="rptKeep">Giữ tất cả bản sửa</button><span class="grow"></span><button class="btn sm" id="rptRev">Thẩm định lại</button></div>
+  </div>
+</div>
 <div class="overlay" id="updOverlay" hidden><div class="box"><b id="updOvT">Đang khởi động lại…</b><span id="updOvS">App đang cài bản mới, cửa sổ sẽ tự tải lại.</span></div></div>
 
 <script>
@@ -1756,7 +1779,7 @@ function renderHead(){
   const sub = j.kind === "sub";
   $("#dIc").className = "ic " + (sub ? "sub" : "book"); $("#dIc").innerHTML = ICON[j.kind];
   $("#dIc").style.background = sub ? "" : ""; $("#dName").textContent = j.name; $("#dName").title = j.name;
-  $("#dMeta").innerHTML = `<span>${extName(j)}</span><span>${LANG_SHORT[j.lang]||j.lang}</span><span>${sub ? num(j.total) + " dòng" : num(j.chapters) + " chương, " + num(j.total) + " đoạn, " + num(j.chars) + " ký tự"}</span><span class="st ${j.status}">${STATUS[j.status]}</span>${j.series ? `<button class="chip" id="serChip" title="Mở bộ nhớ cốt truyện">${SER_ICON}${esc(serName(j.series) || "Bộ phim")}${j.ep ? " · Tập " + esc(j.ep) : ""}</button>` : (agActive() ? `<button class="chip ag" id="serChip" title="Agent tự nhận bộ phim khi dịch">${AGENT_ICON}Agent Editor</button>` : "")}${j.issues ? `<button class="chip bad" id="issChip" title="Lọc các dòng cần xem">${num(j.issues)} cần xem</button>` : ""}${j.saved ? `<a href="#" id="openSaved" title="${esc(j.saved)}">Mở thư mục đã lưu</a>` : ""}`;
+  $("#dMeta").innerHTML = `<span>${extName(j)}</span><span>${LANG_SHORT[j.lang]||j.lang}</span><span>${sub ? num(j.total) + " dòng" : num(j.chapters) + " chương, " + num(j.total) + " đoạn, " + num(j.chars) + " ký tự"}</span><span class="st ${j.status}">${STATUS[j.status]}</span>${j.series ? `<button class="chip" id="serChip" title="Mở bộ nhớ cốt truyện">${SER_ICON}${esc(serName(j.series) || "Bộ phim")}${j.ep ? " · Tập " + esc(j.ep) : ""}</button>` : (agActive() ? `<button class="chip ag" id="serChip" title="Agent tự nhận bộ phim khi dịch">${AGENT_ICON}Agent Editor</button>` : "")}${j.issues ? `<button class="chip bad" id="issChip" title="Lọc các dòng cần xem">${num(j.issues)} cần xem</button>` : ""}${j.agentAt ? `<button class="chip ag" id="rptChip" title="Báo cáo lần chạy Agent gần nhất">Báo cáo Agent${j.edits ? ` · ${num(j.edits)} sửa` : ""}</button>` : ""}${j.saved ? `<a href="#" id="openSaved" title="${esc(j.saved)}">Mở thư mục đã lưu</a>` : ""}`;
   const pct = j.total ? Math.floor(j.done * 100 / j.total) : 0;
   $("#pNums").textContent = `${num(j.done)} / ${num(j.total)}`; $("#pPct").textContent = pct + "%";
   $("#pBar").className = "bar" + (pct === 100 ? " done" : ""); $("#pBar").firstElementChild.style.width = pct + "%";
@@ -1768,6 +1791,7 @@ function renderHead(){
   $("#screen").hidden = !sub || view === "read";
   if($("#openSaved")) $("#openSaved").onclick = e => { e.preventDefault(); api("/api/open_folder", {path:j.saved}); };
   if($("#serChip")) $("#serChip").onclick = () => j.series ? openMem(j.series) : showPanel("agent");
+  if($("#rptChip")) $("#rptChip").onclick = () => openReport();
   if($("#issChip")) $("#issChip").onclick = () => { $("#onlyFlag").checked = true; renderRows(); };
 }
 function renderOutline(){
@@ -1907,6 +1931,7 @@ $("#moreBtn").onclick = e => {
     {label:"Agent: kiểm tra lỗi ngay", hint:"không tốn AI", run:() => $("#agQa") ? $("#agQa").click() : api("/api/agent/qa", {id:sel, tgt:cfg.target}).then(poll)},
     {label:"Bộ nhớ cốt truyện…", run:() => j.series ? openMem(j.series) : showPanel("agent")},
     {label:"Agent: học từ bản dịch này (bản chuẩn)", run:() => openLearn([sel])},
+    {label:"Báo cáo Agent", run:() => openReport()},
     ...(j.saved ? [{label:"Mở thư mục đã lưu", run:() => api("/api/open_folder", {path:j.saved})}] : []),
     "-",
     {label:"Xoá khỏi danh sách", cls:"danger", run:async () => {
@@ -2005,6 +2030,9 @@ async function poll(){
     renderDocs(); renderStatus();
     if(sel) renderHead();
     const cj = job();
+    if(cj && cj.agentAt && rptSeen[cj.id] !== undefined && rptSeen[cj.id] !== cj.agentAt && cj.status !== "running"){
+      rptSeen[cj.id] = cj.agentAt; openReport(); }
+    else if(cj && rptSeen[cj.id] === undefined) rptSeen[cj.id] = cj.agentAt || null;
     if(cj && agRevs[cj.id] !== undefined && agRevs[cj.id] !== cj.agentRev){ agRevs[cj.id] = cj.agentRev; refreshCh(); renderAgentPanel(); loadSeries(); if(!$("#memDlg").hidden) loadMem(); }
     else if(cj) agRevs[cj.id] = cj.agentRev;
     if(cfg.service === "hachimi" && $("#hmPanel") && hmData && (Object.values(hmData.tasks || {}).some(t => t.state === "running") || hmData.probe?.state === "running" || running)) loadHachimi();
@@ -2070,6 +2098,7 @@ function renderAgentPanel(){
       <button class="btn sm" id="agRev">Thẩm định, hiệu đính lại</button>
       <button class="btn sm" id="agLearn">Học tên, thuật ngữ</button>
       <button class="btn sm" id="agSum">Tóm tắt tập vào bộ nhớ</button>
+      <button class="btn sm wide primary" id="agReport">Xem báo cáo Agent</button>
       <button class="btn sm wide" id="agLearnThis" title="Bản dịch đang mở là bản chuẩn: học tên, xưng hô từ nó">Học từ bản dịch đang mở (bản chuẩn)</button></div>
       <div class="hint">${num(j.issues||0)} chỗ cần xem, ${num(j.edits||0)} câu Agent đã sửa.${j.edits ? ` <a href="#" id="agKeepAll">Giữ tất cả bản sửa</a>` : ""}</div></div>`;
   }
@@ -2098,6 +2127,7 @@ function renderAgentPanel(){
   $("#agLearn").onclick = () => agentRun("analyze");
   $("#agSum").onclick = () => agentRun("summary");
   $("#agLearnThis").onclick = () => openLearn([sel]);
+  $("#agReport").onclick = () => openReport();
   if($("#agKeepAll")) $("#agKeepAll").onclick = async e => { e.preventDefault(); await api("/api/agent/accept_all", {id:sel}); poll(); };
   if(!j.series) api("/api/agent/guess?id=" + sel).then(g => { if($("#agGuess") && g.name) $("#agGuess").innerHTML = `Agent sẽ nhận là <b>${esc(g.name)}</b>${g.ep ? `, tập ${esc(g.ep)}` : ""}${g.found ? " (đã có trong bộ nhớ)" : " (bộ mới)"}.`; }).catch(()=>{});
 }
@@ -2216,7 +2246,7 @@ async function loadMem(){
 function closeMem(){ $("#memDlg").hidden = true; }
 $("#memClose").onclick = closeMem;
 $("#memDlg").addEventListener("click", e => { if(e.target.id === "memDlg") closeMem(); });
-document.addEventListener("keydown", e => { if(e.key === "Escape" && !$("#memDlg").hidden) closeMem(); if(e.key === "Escape") $("#learnDlg").hidden = true; });
+document.addEventListener("keydown", e => { if(e.key === "Escape" && !$("#memDlg").hidden) closeMem(); if(e.key === "Escape"){ $("#learnDlg").hidden = true; $("#rptDlg").hidden = true; } });
 $("#memSer").onchange = e => { memSid = e.target.value; loadMem(); };
 $("#memTab").onclick = e => { const b = e.target.closest("button"); if(!b) return; memTab = b.dataset.v; $$("#memTab button").forEach(x => x.classList.toggle("on", x === b)); renderMem(); };
 const kindOpts = v => Object.entries(KIND_NAMES).map(([k, n]) => `<option value="${k}" ${k===v?"selected":""}>${n}</option>`).join("");
@@ -2316,6 +2346,54 @@ $("#memDel").onclick = async () => {
   if(!memSid || !confirm(`Xoá toàn bộ bộ nhớ của “${mem?.series.name}”? Tên, thuật ngữ, xưng hô và tóm tắt các tập sẽ mất (bản dịch đã có không bị ảnh hưởng).`)) return;
   await api("/api/agent/series/delete", {id:memSid}); await loadSeries(); memSid = seriesList[0]?.id || null; loadMem(); poll();
 };
+
+/* ---- báo cáo Agent */
+const rptSeen = {}; let rpt = null;
+const TASK_NAMES = {translate:"Dịch + thẩm định", review:"Thẩm định, hiệu đính lại", analyze:"Đọc hiểu, học tên", summary:"Tóm tắt tập", learn:"Học từ bản dịch chuẩn"};
+const ln = (i, label) => `<button class="ln" data-i="${i}">${label || "Dòng " + (i + 1)}</button>`;
+async function openReport(){
+  if(!sel) return;
+  try{ rpt = await api("/api/agent/report?id=" + sel); }catch(e){ return toast(e.message, "err"); }
+  const r = rpt, L = r.last || {}, unit = r.kind === "sub" ? "dòng" : "đoạn";
+  $("#rptT").textContent = "Báo cáo Agent: " + r.name;
+  let h = `<h2>1. Tổng quan</h2><div class="kpi">
+    <div><b>${num(r.done)}/${num(r.total)}</b><span>${unit} đã có bản dịch</span></div>
+    <div><b>${num(L.translated || 0)}</b><span>${unit} dịch mới lần này</span></div>
+    <div><b>${num(r.reviewed)}</b><span>${unit} đã qua thẩm định</span></div>
+    <div><b>${num(r.edits)}</b><span>câu Agent đã sửa (chờ bạn giữ)</span></div>
+    <div><b>${num(r.issues)}</b><span>chỗ còn cần xem</span></div></div><ul>`;
+  if(L.at) h += `<li><b>Lần chạy gần nhất:</b> ${esc(TASK_NAMES[L.task] || L.task)}${L.svc ? " bằng " + esc(L.svc) : ""}, ${new Date(L.at * 1000).toLocaleString("vi-VN")}, mất ${fmtTime(L.took || 0)}${L.status === "stopped" ? " (đã dừng giữa chừng)" : (L.status === "error" ? " (gặp lỗi, xem Nhật ký)" : "")}.</li>`;
+  if(L.fixed) h += `<li><b>Hiệu đính lần này:</b> sửa ${num(L.fixed)} trên ${num(L.reviewed)} ${unit} được rà soát.</li>`;
+  if(L.learned_t || L.learned_r) h += `<li><b>Bộ nhớ học thêm:</b> ${num(L.learned_t)} tên, thuật ngữ và ${num(L.learned_r)} cách xưng hô.</li>`;
+  if(r.series) h += `<li><b>Bộ phim:</b> ${esc(r.series)}${r.ep ? ", tập " + esc(r.ep) : ""} (bộ nhớ có ${num(r.memTerms)} tên, thuật ngữ).</li>`;
+  h += r.done === r.total && !r.issues ? `<li><b>Không còn dòng trống, không còn chữ nước ngoài sót lại, không lệch tên so với bộ nhớ.</b></li>` :
+       (r.done < r.total ? `<li>Còn ${num(r.total - r.done)} ${unit} chưa dịch.</li>` : "");
+  h += `</ul>`;
+  h += `<h2>2. Các điểm hiệu đính &amp; chuẩn hoá</h2>`;
+  if(!r.groups.length) h += `<p class="hint" style="margin:0">Chưa có câu nào được Agent sửa${r.reviewed ? " (bản dịch đã đạt)" : ""}.</p>`;
+  for(const g of r.groups){
+    h += `<h3>${esc(g.title)} (${g.items.length})</h3><ul>`;
+    for(const it of g.items.slice(0, 60)) h += `<li>${ln(it.i)}: ${it.old ? `sửa từ <s>“${esc(plain(it.old))}”</s> thành ` : ""}<b>“${esc(plain(it.new))}”</b>${it.why ? ` <span class="src">(${esc(it.why)})</span>` : ""}</li>`;
+    if(g.items.length > 60) h += `<li class="more">… và ${g.items.length - 60} câu khác (tick “Cần xem” để xem hết)</li>`;
+    h += `</ul>`;
+  }
+  h += `<h2>3. Còn cần xem</h2>`;
+  if(!r.issueList.length) h += `<p class="hint" style="margin:0">Không còn chỗ nào cần xem.</p>`;
+  else { h += `<ul>`; for(const it of r.issueList.slice(0, 80)) h += `<li>${ln(it.i)}: ${it.msgs.map(esc).join("; ")} <span class="src">— “${esc(plain(it.vi))}”</span></li>`;
+    if(r.issueList.length > 80) h += `<li class="more">… và ${r.issueList.length - 80} chỗ khác</li>`; h += `</ul>`; }
+  if(r.learned.length){
+    h += `<h2>4. Tên, thuật ngữ học được ở tập này</h2><ul>` + r.learned.slice(0, 80).map(t => `<li>${esc(t.src)} → <b>${esc(t.vi)}</b> <span class="src">(${esc(KIND_NAMES[t.kind] || t.kind)}${t.ok ? ", đã duyệt" : ", AI đề xuất"})</span></li>`).join("") + `</ul>`;
+  }
+  h += `<p style="margin-top:14px">${r.done === r.total ? "Bản dịch đã hoàn chỉnh, sẵn sàng xuất phụ đề hoặc tạo giọng đọc." : "Bấm “Dịch tiếp” để dịch nốt phần còn lại."}</p>`;
+  $("#rptBody").innerHTML = h; $("#rptKeep").disabled = !r.edits;
+  $("#rptDlg").hidden = false;
+}
+$("#rptBody").addEventListener("click", e => { const b = e.target.closest(".ln"); if(!b) return; $("#rptDlg").hidden = true; gotoSeg(+b.dataset.i); });
+$("#rptClose").onclick = () => $("#rptDlg").hidden = true;
+$("#rptDlg").addEventListener("click", e => { if(e.target.id === "rptDlg") $("#rptDlg").hidden = true; });
+$("#rptCopy").onclick = async () => { try{ await navigator.clipboard.writeText($("#rptBody").innerText); toast("Đã chép báo cáo.", "ok"); }catch(e){ toast("Không chép được: " + e.message, "err"); } };
+$("#rptKeep").onclick = async () => { await api("/api/agent/accept_all", {id:sel}); toast("Đã giữ tất cả bản sửa.", "ok"); await poll(); openReport(); };
+$("#rptRev").onclick = () => { $("#rptDlg").hidden = true; agentRun("review"); };
 
 /* ---- học từ bản dịch chuẩn */
 let lrnPick = new Set();

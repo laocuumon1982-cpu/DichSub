@@ -3,7 +3,15 @@
 - **DichSub.exe**: bản 1 file, bấm đúp là chạy.
 - **DichSub-Portable.zip**: bản portable, giải nén rồi mở `DichSub.exe` bên trong. Mọi dữ liệu nằm trong thư mục `data`, chép sang USB hay máy khác là dùng tiếp.
 
-Đang dùng bản 3.1 trở lên: bấm nút "Có bản 4.0.0" ở góc trên app để tự cập nhật, giữ nguyên dữ liệu.
+Đang dùng bản 3.1 trở lên: bấm nút "Có bản 4.0.1" ở góc trên app để tự cập nhật, giữ nguyên dữ liệu.
+
+## Có gì mới trong 4.0.1
+
+- **Báo cáo Agent**: chạy xong là tự mở bảng báo cáo cho tài liệu đang xem.
+  - Tổng quan: số dòng đã dịch, dịch mới, đã thẩm định, đã sửa, còn cần xem, thời gian chạy, bộ nhớ học thêm.
+  - Các điểm hiệu đính chia nhóm: danh xưng & nhân vật, cảnh giới, công pháp/pháp bảo/chiêu thức, địa danh/môn phái, xưng hô, dịch sai/sót, rút gọn, trau chuốt câu chữ. Mỗi mục ghi bản cũ, bản mới, lý do.
+  - Bấm "Dòng N" để nhảy tới đúng câu trên timeline. Có nút Chép báo cáo, Giữ tất cả bản sửa, Thẩm định lại.
+  - Mở lại bất cứ lúc nào: nút "Báo cáo Agent" trên đầu tài liệu hoặc trong mục Agent Editor.
 
 ## Có gì mới trong 4.0.0: AGENT EDITOR, biết "nhớ cốt truyện"
 

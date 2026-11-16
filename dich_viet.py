@@ -38,7 +38,7 @@ import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-APP_VERSION = "4.0.0"
+APP_VERSION = "4.0.1"
 APP_NAME = "Dịch Sub & Book v4.0 Agent Editor by Duy Anh"
 GITHUB_REPO = "laocuumon1982-cpu/DichSub"     # nơi đăng bản mới (GitHub Releases)
 PORT = 47863
@@ -4252,7 +4252,7 @@ class Job:
             self.agent = {"issues": {int(k): v for k, v in (d.get("issues") or {}).items() if int(k) < n},
                           "edits": {int(k): v for k, v in (d.get("edits") or {}).items() if int(k) < n},
                           "ignored": set(d.get("ignored") or []), "reviewed": set(d.get("reviewed") or []),
-                          "analyzed": bool(d.get("analyzed")), "learned": bool(d.get("learned"))}
+                          "analyzed": bool(d.get("analyzed")), "learned": bool(d.get("learned")), "last": d.get("last")}
         except (OSError, ValueError):
             pass
 
@@ -4264,7 +4264,8 @@ class Job:
         tmp = os.path.join(self.dir, "agent.json.tmp")
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump({"issues": ag["issues"], "edits": ag["edits"], "ignored": sorted(ag["ignored"]),
-                       "reviewed": sorted(ag["reviewed"]), "analyzed": ag["analyzed"], "learned": ag.get("learned", False)},
+                       "reviewed": sorted(ag["reviewed"]), "analyzed": ag["analyzed"], "learned": ag.get("learned", False),
+                       "last": ag.get("last")},
                       f, ensure_ascii=False)
         os.replace(tmp, os.path.join(self.dir, "agent.json"))
 
@@ -4293,7 +4294,8 @@ class Job:
                 "chars": sum(len(s.src) for s in self.book.segs) if not hasattr(self, "_chars") else self._chars,
                 "series": self.settings.get("series", ""), "ep": self.settings.get("ep", ""),
                 "issues": len(self.agent["issues"]), "edits": len(self.agent["edits"]), "agentRev": self.agent_rev,
-                "learned": self.agent.get("learned", False)}
+                "learned": self.agent.get("learned", False),
+                "agentAt": (self.agent.get("last") or {}).get("at")}
 
     def chapter_progress(self):
         segs = self.book.segs
@@ -5317,7 +5319,8 @@ REVIEW_SYS = """You are the chief editor of a professional {kindname} translatio
 - unnatural, word-for-word wording{extra}.
 
 Output format: one line per line that needs a fix:
-[N] corrected translation ||| short reason in Vietnamese
+[N] corrected translation ||| [tag] short reason in Vietnamese
+tag is one of: [tên] names/titles of characters, [cảnh giới] cultivation realms/levels, [công pháp] techniques/artifacts/spells, [địa danh] places/sects, [xưng hô] pronouns/forms of address, [dịch sai] wrong/missing meaning, [độ dài] too long for the screen, [câu chữ] wording/style
 Keep "<br>" line breaks and formatting tags like <i>, {{\\an8}}. Do not output lines that are already good. If every line is fine, output exactly: OK"""
 
 SUMMARY_SYS = """You keep the SERIES BIBLE of a {kindname} translation team. Write in Vietnamese. Return ONLY a JSON object:
@@ -5397,6 +5400,26 @@ class AgentEngine(BookLLMEngine):
 
     # ---- các bước
     def run(self, segs):
+        """Chạy các bước, ghi lại số liệu cho bảng Báo cáo Agent."""
+        before = sum(1 for x in segs if x.src.strip() and x.vi is not None)
+        self.st = {"task": self.only or "translate", "at": time.time(), "svc": self.model or "", "scope": len(segs),
+                   "translated": 0, "reviewed": 0, "fixed": 0, "learned_t": 0, "learned_r": 0, "status": "done"}
+        try:
+            self._steps(segs)
+        except Stopped:
+            self.st["status"] = "stopped"
+            raise
+        except Exception:
+            self.st["status"] = "error"
+            raise
+        finally:
+            after = sum(1 for x in segs if x.src.strip() and x.vi is not None)
+            self.st["translated"] = max(0, after - before)
+            self.st["took"] = round(time.time() - self.st["at"])
+            self.job.agent["last"] = self.st
+            self.post("agent", None)
+
+    def _steps(self, segs):
         self.cues = segs
         a = self.offset
         self.load_memory()
@@ -5486,6 +5509,8 @@ class AgentEngine(BookLLMEngine):
                     new_r += STORY.learn_relation(self.mem["sid"], r)
         self.mem["terms"] = STORY.terms(self.mem["sid"])
         self.mem["relations"] = STORY.relations(self.mem["sid"])
+        self.st["learned_t"] += new_t
+        self.st["learned_r"] += new_r
         self.post("log", f"Agent: học thêm {new_t} tên/thuật ngữ, {new_r} cách xưng hô. Bộ nhớ hiện có "
                          f"{len(self.mem['terms'])} tên/thuật ngữ.")
         self.post("memory", None)
@@ -5543,6 +5568,8 @@ class AgentEngine(BookLLMEngine):
                     new_r += STORY.learn_relation(self.mem["sid"], r, trusted=True)
         self.mem["terms"] = STORY.terms(self.mem["sid"])
         self.mem["relations"] = STORY.relations(self.mem["sid"])
+        self.st["learned_t"] += new_t
+        self.st["learned_r"] += new_r
         self.post("log", f"Agent: học từ bản dịch chuẩn được {new_t} tên/thuật ngữ, {new_r} cách xưng hô (ghi là đã duyệt).")
         self.post("memory", None)
 
@@ -5640,10 +5667,14 @@ class AgentEngine(BookLLMEngine):
                 if _norm_cmp(new) == _norm_cmp(old) or not new.strip():
                     continue
                 prev_edit = ag["edits"].get(i + a)
-                ag["edits"][i + a] = {"old": prev_edit["old"] if prev_edit else old, "new": new, "why": why or "Hiệu đính"}
+                cat, why = classify_edit(old, new, why, self.mem["terms"])
+                ag["edits"][i + a] = {"old": prev_edit["old"] if prev_edit else old, "new": new, "why": why or "Hiệu đính",
+                                      "cat": cat}
                 segs[i].vi = new
                 self.post("cue", i)
                 fixed += 1
+        self.st["reviewed"] += len(todo)
+        self.st["fixed"] += fixed
         self.post("log", f"Agent: đã hiệu đính {fixed} {self.unit}.")
 
     def summarize(self):
@@ -5675,6 +5706,72 @@ class AgentEngine(BookLLMEngine):
             STORY.save_series({"id": self.mem["sid"], "synopsis": syn})
         self.post("log", "Agent: đã ghi nhớ tóm tắt tập vào bộ nhớ cốt truyện.")
         self.post("memory", None)
+
+
+EDIT_CATS = [("name", "Chuẩn hoá danh xưng & nhân vật"), ("realm", "Chuẩn hoá cảnh giới tu luyện"),
+             ("skill", "Chuẩn hoá công pháp, pháp bảo & chiêu thức"), ("place", "Chuẩn hoá địa danh, môn phái"),
+             ("address", "Chỉnh xưng hô"), ("meaning", "Sửa dịch sai, dịch sót"),
+             ("length", "Rút gọn cho kịp thời gian hiện"), ("style", "Trau chuốt câu chữ cho mượt mà")]
+EDIT_TAGS = [("name", ("tên", "danh xưng", "nhân vật")), ("realm", ("cảnh giới",)), ("skill", ("công pháp", "chiêu", "pháp bảo", "bảo vật", "thuật")),
+             ("place", ("địa danh", "môn phái", "tông môn", "địa điểm")), ("address", ("xưng hô", "đại từ", "xưng")),
+             ("meaning", ("dịch sai", "sai nghĩa", "sót", "thiếu", "chưa dịch", "dịch sót")), ("length", ("độ dài", "quá dài", "rút gọn", "dài")),
+             ("style", ("câu chữ", "mượt", "tự nhiên", "văn phong", "chính tả", "viết hoa"))]
+KIND_CAT = {"char": "name", "title": "name", "realm": "realm", "skill": "skill", "item": "skill", "place": "place", "org": "place"}
+PRONOUNS = ("ta", "ngươi", "huynh", "đệ", "muội", "tỷ", "tỉ", "sư phụ", "đồ nhi", "lão phu", "bổn", "tại hạ", "các hạ",
+            "tiền bối", "vãn bối", "anh", "em", "tôi", "cậu", "mày", "tao", "chàng", "nàng", "hắn", "y", "bọn ta", "chúng ta")
+
+
+def classify_edit(old, new, why, terms):
+    """Xếp một câu Agent sửa vào nhóm cho bảng báo cáo. Trả về (nhóm, lý do đã bỏ thẻ)."""
+    why = (why or "").strip()
+    m = re.match(r"^\s*[\[(【]\s*([^\])】]{1,20})\s*[\])】]\s*[:：-]?\s*", why)
+    tag = ""
+    if m:
+        tag, why = m.group(1).lower(), why[m.end():].strip()
+    low = (tag or why).lower()
+    for key, words in EDIT_TAGS:
+        if any(w in low for w in words):
+            if tag or key not in ("length",) or "dài" in low:
+                return key, why
+    no, nn = _norm_cmp(old), _norm_cmp(new)
+    for t in terms:
+        v = _norm_cmp(t.get("vi"))
+        if v and v in nn and v not in no:
+            return KIND_CAT.get(t.get("kind"), "name"), why
+    wo, wn = set(re.findall(r"\w+", no)), set(re.findall(r"\w+", nn))
+    if any((p in wo) != (p in wn) for p in PRONOUNS if " " not in p):
+        return "address", why
+    if len(nn) < len(no) * 0.75:
+        return "length", why
+    return "style", why
+
+
+def agent_report(job):
+    """Bảng Báo cáo Agent: tổng quan, các điểm hiệu đính theo nhóm, chỗ còn cần xem, bộ nhớ."""
+    ag, segs = job.agent, job.book.segs
+    total = sum(1 for x in segs if x.src.strip())
+    done = sum(1 for x in segs if x.src.strip() and x.vi is not None)
+    terms = []
+    sid = job.settings.get("series")
+    if sid and STORY.series(sid):
+        terms = STORY.terms(sid)
+    groups = {k: [] for k, _ in EDIT_CATS}
+    for i in sorted(ag["edits"]):
+        e = ag["edits"][i]
+        cat = e.get("cat")
+        if cat not in groups:
+            cat, why = classify_edit(e.get("old"), e.get("new"), e.get("why"), terms)
+            e["cat"], e["why"] = cat, why or e.get("why")
+        groups[cat].append({"i": i, "old": e.get("old") or "", "new": e.get("new") or "", "why": e.get("why") or "",
+                            "src": segs[i].src if i < len(segs) else ""})
+    learned = [t for t in terms if str(t.get("first_ep") or "") == str(job.settings.get("ep") or "-")] if terms else []
+    return {"name": job.name, "kind": job.book.kind, "total": total, "done": done,
+            "reviewed": len(ag["reviewed"]), "edits": len(ag["edits"]), "issues": len(ag["issues"]),
+            "series": (STORY.series(sid) or {}).get("name", "") if sid else "", "ep": job.settings.get("ep", ""),
+            "last": ag.get("last"), "groups": [{"key": k, "title": n, "items": groups[k]} for k, n in EDIT_CATS if groups[k]],
+            "issueList": [{"i": i, "msgs": v, "vi": segs[i].vi or "", "src": segs[i].src} for i, v in sorted(ag["issues"].items())][:300],
+            "learned": [{"src": t["src"], "vi": t["vi"], "kind": t["kind"], "ok": t["ok"]} for t in learned][:200],
+            "memTerms": len(terms)}
 
 
 def agent_supported(svc):
@@ -5984,6 +6081,10 @@ class Handler(BaseHTTPRequestHandler):
                     re.sub(r"[^\x20-\x7e]", "_", name).replace('"', ""), urllib.parse.quote(name))
                 return self._send(200, json.dumps(data, ensure_ascii=False, indent=1), "application/json; charset=utf-8",
                                   {"Content-Disposition": disp})
+            if u.path == "/api/agent/report":
+                job = self._job(q.get("id", ""))
+                with STATE.lock:
+                    return self._send(200, agent_report(job))
             if u.path == "/api/agent/guess":
                 job = self._job(q.get("id", ""))
                 name, ep = guess_episode(job.name)

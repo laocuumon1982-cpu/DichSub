@@ -101,6 +101,8 @@ Giữ tên nhân vật, cảnh giới, chiêu thức, cách xưng hô giống h�
    app tự ghép theo số tập. Bấm "Bắt đầu học": Agent đọc hết, học đúng tên, xưng hô theo bản dịch đó.
 5. Sau khi dịch, xem thanh timeline: đỏ = cần xem, vàng = Agent đã sửa. Bấm "Chỗ cần xem tiếp theo"
    hoặc tick "Cần xem". Trên từng dòng: Hoàn tác (về bản cũ), Giữ, Bỏ qua cảnh báo; bấm vào bản dịch để sửa tay.
+   Agent chạy xong tự mở "Báo cáo Agent": tổng quan và các chỗ đã sửa theo nhóm (tên nhân vật, cảnh giới,
+   công pháp, xưng hô, dịch sai, câu chữ...). Bấm "Dòng N" để nhảy tới câu đó.
 6. "Kiểm tra lỗi ngay" không tốn AI. "Thẩm định, hiệu đính lại" cho Agent rà lại cả tài liệu.
    "Xuất bộ nhớ" để chép sang máy khác hoặc chia sẻ cho nhóm làm sub.
 Mẹo: AI Agent CLI mỗi lần gọi mất vài giây khởi động, nên để "Dòng phụ đề mỗi lần" khoảng 60-100.
